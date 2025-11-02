@@ -11,7 +11,7 @@ import {
   Linking,
 } from 'react-native';
 import Svg, { G, Path } from 'react-native-svg';
-import { shared } from '@go-transit-ontario/shared';
+import { shared, CONSTANT_VALUE } from '@go-transit-ontario/shared';
 
 
 export const App = () => {
@@ -32,7 +32,7 @@ export const App = () => {
           style={styles.scrollView}
         >
           <View style={styles.section}>
-            <Text style={styles.textLg}>Hello bruh,</Text>
+            <Text style={styles.textLg}>Hello bruh,{CONSTANT_VALUE}</Text>
             <Text
               style={[styles.textXL, styles.appTitleText]}
               testID="heading"
