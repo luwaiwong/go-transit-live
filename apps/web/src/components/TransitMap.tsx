@@ -149,6 +149,16 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                     return;
                 }
 
+                // Check if API returned empty data
+                if (allStops.length === 0) {
+                    console.warn('⚠️ No stops received from API. This could be due to:');
+                    console.warn('  1. Network connectivity issues');
+                    console.warn('  2. API key not configured (check .env.local)');
+                    console.warn('  3. Metrolinx API is down');
+                    setLoading(false);
+                    return;
+                }
+
                 // Fetch details for each stop to get coordinates
                 // Increased limit and show both train and bus stations
                 const stopsWithDetails = await Promise.all(
@@ -219,6 +229,31 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <p>Loading transit map...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show message if no stops loaded
+    if (stops.length === 0) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center max-w-md p-6">
+                    <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 className="text-lg font-bold mb-2 text-gray-700">No Station Data Available</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        Unable to load GO Transit station data. This may be due to:
+                    </p>
+                    <ul className="text-xs text-gray-500 text-left list-disc list-inside space-y-1">
+                        <li>Network connectivity issues</li>
+                        <li>Metrolinx API is temporarily unavailable</li>
+                        <li>Missing or invalid API key configuration</li>
+                    </ul>
+                    <p className="text-xs text-gray-500 mt-4">
+                        Check the browser console for more details.
+                    </p>
                 </div>
             </div>
         );

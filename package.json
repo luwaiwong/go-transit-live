@@ -17,7 +17,8 @@
     "react-native": "0.79.3",
     "react-native-svg": "~15.11.2",
     "react-native-svg-transformer": "~1.5.1",
-    "react-native-web": "~0.20.0"
+    "react-native-web": "~0.20.0",
+    "undici": "^7.16.0"
   },
   "devDependencies": {
     "@expo/cli": "~0.24.14",

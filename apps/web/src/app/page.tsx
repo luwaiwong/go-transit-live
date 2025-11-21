@@ -668,13 +668,13 @@ export default function Index() {
             </div>
 
             {/* Main Content - Map with Legend */}
-            <div className="flex-1 p-6 flex gap-6">
-                <div className="flex-1 rounded-xl shadow-lg border-4 overflow-hidden" style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.textSecondary + '50' }}>
+            <div className="flex-1 p-6 relative">
+                <div className="h-full rounded-xl shadow-lg border-4 overflow-hidden" style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.textSecondary + '50' }}>
                     <TransitMap onStopClick={handleStopClick} />
                 </div>
 
-                {/* Legend on the right */}
-                <div className="w-72 flex-shrink-0">
+                {/* Legend hovering over map (bottom-right) */}
+                <div className="absolute bottom-10 right-10 z-10" style={{ maxWidth: '240px' }}>
                     <MapLegend />
                 </div>
             </div>
