@@ -1,5 +1,5 @@
 
-import { Stop, Line, StopDetails, NextService, NextServiceResponse, Journey, Service, UIServiceInfo } from './MetrolinxTypes';
+import { Stop, Line, StopDetails, NextService, NextServiceResponse, Journey, Service, UIServiceInfo, VehiclePositionResponse } from './MetrolinxTypes';
 
 const METROLINX_API_URL = "https://api.openmetrolinx.com/OpenDataAPI/api/V1";
 const METROLINX_API_KEY = process.env.NX_EXPO_METROLINX_API_KEY;
@@ -175,4 +175,10 @@ export async function getUIServiceData(stop: string, line: string, activeStops: 
     });
 
     return uiData;
+}
+
+export async function fetchVehiclePositions(): Promise<VehiclePositionResponse | null> {
+    console.log("Fetching vehicle positions (GTFS real-time feed)");
+    const data = await metrolinxFetch("/Gtfs/Feed/VehiclePosition");
+    return data;
 }

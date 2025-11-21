@@ -132,3 +132,45 @@ export interface UIServiceInfo {
     DepartureChanged: boolean;
     PlatformChanged: boolean;
 }
+
+// GTFS Real-time Vehicle Position Types
+export interface VehiclePosition {
+    id: string;
+    vehicle: {
+        trip?: {
+            tripId: string;
+            routeId: string;
+            directionId?: number;
+            startTime?: string;
+            startDate?: string;
+            scheduleRelationship?: number;
+        };
+        vehicle?: {
+            id: string;
+            label?: string;
+            licensePlate?: string;
+        };
+        position?: {
+            latitude: number;
+            longitude: number;
+            bearing?: number;
+            odometer?: number;
+            speed?: number;
+        };
+        currentStopSequence?: number;
+        stopId?: string;
+        currentStatus?: number;
+        timestamp?: number;
+        congestionLevel?: number;
+        occupancyStatus?: number;
+    };
+}
+
+export interface VehiclePositionResponse {
+    header: {
+        gtfsRealtimeVersion: string;
+        incrementality: number;
+        timestamp: number;
+    };
+    entity: VehiclePosition[];
+}
