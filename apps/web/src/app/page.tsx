@@ -3,7 +3,9 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useTheme } from '../contexts/ThemeContext';
+import DateSelector from '../components/DateSelector';
 
 // Dynamically import TransitMap with no SSR
 const TransitMap = dynamic(() => import('../components/TransitMap'), {
@@ -61,6 +63,9 @@ interface Journey {
 
 export default function Index() {
     const { theme } = useTheme();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
     const [selectedStop, setSelectedStop] = useState<StopDetails | null>(null);
     const [stops, setStops] = useState<Stop[]>([]);
     const [fromStop, setFromStop] = useState('');
@@ -71,10 +76,13 @@ export default function Index() {
     const [searchTo, setSearchTo] = useState('');
     const [showFromDropdown, setShowFromDropdown] = useState(false);
     const [showToDropdown, setShowToDropdown] = useState(false);
-    const [viewMode, setViewMode] = useState<'now' | 'day'>('now');
+    const [selectedDate, setSelectedDate] = useState(new Date());
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [showStationList, setShowStationList] = useState(false);
     const [stationSearchQuery, setStationSearchQuery] = useState('');
+
+    // Get current view from URL
+    const currentView = searchParams?.get('view') || 'navigation';
 
     useEffect(() => {
         // Fetch all stops
@@ -99,6 +107,36 @@ export default function Index() {
         setFromStop(stop.LocationCode);
     };
 
+    // Initialize from URL params
+    useEffect(() => {
+        const from = searchParams?.get('from');
+        const to = searchParams?.get('to');
+
+        if (from) {
+            setFromStop(from);
+            const stop = stops.find(s => s.LocationCode === from);
+            if (stop) setSearchFrom(stop.LocationName);
+        }
+        if (to) {
+            setToStop(to);
+            const stop = stops.find(s => s.LocationCode === to);
+            if (stop) setSearchTo(stop.LocationName);
+        }
+    }, [searchParams, stops]);
+
+    // Update URL
+    const updateURL = (params: Record<string, string>) => {
+        const current = new URLSearchParams(searchParams?.toString());
+        Object.entries(params).forEach(([key, value]) => {
+            if (value) {
+                current.set(key, value);
+            } else {
+                current.delete(key);
+            }
+        });
+        router.push(`/?${current.toString()}`);
+    };
+
     const handleSearch = async () => {
         if (!fromStop || !toStop) {
             alert('Please select both origin and destination stations');
@@ -112,18 +150,27 @@ export default function Index() {
 
         setLoading(true);
         try {
-            const fullDay = viewMode === 'day';
+            // Use selected date instead of fullDay flag
+            const dateStr = selectedDate.toISOString().split('T')[0];
             const response = await fetch(
-                `/api/journey?from=${fromStop}&to=${toStop}&fullDay=${fullDay}`
+                `/api/journey?from=${fromStop}&to=${toStop}&date=${dateStr}`
             );
             const data = await response.json();
             setJourneys(data || []);
+
+            // Navigate to departures view
+            updateURL({ view: 'departures', from: fromStop, to: toStop, date: dateStr });
         } catch (error) {
             console.error('Error fetching journeys:', error);
             setJourneys([]);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleBackToNavigation = () => {
+        updateURL({ view: 'navigation', from: '', to: '', date: '' });
+        setJourneys([]);
     };
 
     const filteredFromStops = stops.filter((stop) =>
@@ -156,6 +203,25 @@ export default function Index() {
             return `${hours}h ${minutes}m`;
         }
         return `${minutes}m`;
+    };
+
+    const formatDate = (date: Date) => {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        if (date.toDateString() === today.toDateString()) {
+            return 'Today';
+        } else if (date.toDateString() === tomorrow.toDateString()) {
+            return 'Tomorrow';
+        } else {
+            return date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+            });
+        }
     };
 
     const filteredStations = stops?.filter((stop) =>
@@ -224,14 +290,107 @@ export default function Index() {
 
                         {!showStationList ? (
                             <>
-                                {/* Trip Planner */}
-                                <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
-                                    <h2 className="text-lg font-bold mb-3 flex items-center gap-2" style={{ color: theme.colors.text }}>
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" style={{ color: theme.colors.primary }}>
-                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                </svg>
-                                Plan Your Trip
-                            </h2>
+                                {currentView === 'departures' ? (
+                                    /* Departures View */
+                                    <div className="flex flex-col h-full">
+                                        {/* Header with Back Button */}
+                                        <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
+                                            <button
+                                                onClick={handleBackToNavigation}
+                                                className="flex items-center gap-2 mb-3 transition-colors"
+                                                style={{ color: theme.colors.primary }}
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                </svg>
+                                                Back to Trip Planner
+                                            </button>
+                                            <h2 className="text-lg font-bold" style={{ color: theme.colors.text }}>
+                                                {stops.find(s => s.LocationCode === fromStop)?.LocationName} → {stops.find(s => s.LocationCode === toStop)?.LocationName}
+                                            </h2>
+                                            <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>
+                                                {formatDate(selectedDate)}
+                                            </p>
+                                        </div>
+
+                                        {/* Journey Results */}
+                                        <div className="flex-1 overflow-y-auto p-4">
+                                            {loading ? (
+                                                <div className="flex items-center justify-center h-full">
+                                                    <div className="text-center">
+                                                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
+                                                        <p style={{ color: theme.colors.text }}>Loading trips...</p>
+                                                    </div>
+                                                </div>
+                                            ) : journeys.length === 0 ? (
+                                                <div className="text-center mt-8" style={{ color: theme.colors.textSecondary }}>
+                                                    No direct trips found for this date.
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    <h3 className="text-sm font-bold mb-3" style={{ color: theme.colors.text }}>
+                                                        {journeys.length} Trip{journeys.length !== 1 ? 's' : ''} Found
+                                                    </h3>
+                                                    {journeys.map((journey, index) => {
+                                                        const service = journey.Services[0];
+                                                        const trip = service.Trips.trip[0];
+
+                                                        return (
+                                                            <div
+                                                                key={index}
+                                                                className="rounded-lg p-3 transition-colors"
+                                                                style={{ backgroundColor: theme.colors.background }}
+                                                            >
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <div
+                                                                        className="w-1 h-12 rounded-full"
+                                                                        style={{ backgroundColor: `#${service.Colour}` }}
+                                                                    />
+                                                                    <div className="flex-1">
+                                                                        <div className="font-bold text-sm">{trip.Display}</div>
+                                                                        <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                                                                            {trip.Type === 'T' ? '🚆 Train' : '🚌 Bus'} • Line {trip.Line}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-3 text-xs">
+                                                                    <div>
+                                                                        <div style={{ color: theme.colors.textSecondary }}>Departs</div>
+                                                                        <div className="font-bold" style={{ color: theme.colors.primary }}>
+                                                                            {formatTime(service.StartTime)}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex-1 border-t border-dashed" style={{ borderColor: theme.colors.textSecondary }}></div>
+                                                                    <div style={{ color: theme.colors.textSecondary }}>
+                                                                        {parseDuration(service.Duration)}
+                                                                    </div>
+                                                                    <div className="flex-1 border-t border-dashed" style={{ borderColor: theme.colors.textSecondary }}></div>
+                                                                    <div>
+                                                                        <div style={{ color: theme.colors.textSecondary }}>Arrives</div>
+                                                                        <div className="font-bold" style={{ color: theme.colors.secondary }}>
+                                                                            {formatTime(service.EndTime)}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Navigation View */
+                                    <>
+                                        {/* Trip Planner */}
+                                        <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
+                                            <h2 className="text-lg font-bold mb-3 flex items-center gap-2" style={{ color: theme.colors.text }}>
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" style={{ color: theme.colors.primary }}>
+                                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                        </svg>
+                                        Plan Your Trip
+                                    </h2>
 
                             <div className="space-y-3">
                                 {/* From Station */}
@@ -317,34 +476,11 @@ export default function Index() {
                                     )}
                                 </div>
 
-                                {/* View Mode */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
-                                        Time Range
-                                    </label>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setViewMode('now')}
-                                            className="flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors"
-                                            style={{
-                                                backgroundColor: viewMode === 'now' ? theme.colors.primary : theme.colors.textSecondary + '30',
-                                                color: viewMode === 'now' ? '#ffffff' : theme.colors.text
-                                            }}
-                                        >
-                                            Next
-                                        </button>
-                                        <button
-                                            onClick={() => setViewMode('day')}
-                                            className="flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors"
-                                            style={{
-                                                backgroundColor: viewMode === 'day' ? theme.colors.primary : theme.colors.textSecondary + '30',
-                                                color: viewMode === 'day' ? '#ffffff' : theme.colors.text
-                                            }}
-                                        >
-                                            Full Day
-                                        </button>
-                                    </div>
-                                </div>
+                                {/* Date Selector */}
+                                <DateSelector
+                                    selectedDate={selectedDate}
+                                    onDateChange={setSelectedDate}
+                                />
 
                                 {/* Search Button */}
                                 <button
@@ -448,6 +584,8 @@ export default function Index() {
                             </div>
                         </div>
                     </>
+                                )}
+                            </>
                         ) : (
                             /* Station List View */
                             <div className="flex flex-col h-full">
