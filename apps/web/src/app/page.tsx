@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Dynamically import TransitMap with no SSR
 const TransitMap = dynamic(() => import('../components/TransitMap'), {
@@ -59,6 +60,7 @@ interface Journey {
 }
 
 export default function Index() {
+    const { theme } = useTheme();
     const [selectedStop, setSelectedStop] = useState<StopDetails | null>(null);
     const [stops, setStops] = useState<Stop[]>([]);
     const [fromStop, setFromStop] = useState('');
@@ -71,6 +73,8 @@ export default function Index() {
     const [showToDropdown, setShowToDropdown] = useState(false);
     const [viewMode, setViewMode] = useState<'now' | 'day'>('now');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [showStationList, setShowStationList] = useState(false);
+    const [stationSearchQuery, setStationSearchQuery] = useState('');
 
     useEffect(() => {
         // Fetch all stops
@@ -154,12 +158,16 @@ export default function Index() {
         return `${minutes}m`;
     };
 
+    const filteredStations = stops?.filter((stop) =>
+        stop.LocationName?.toLowerCase().includes(stationSearchQuery.toLowerCase())
+    ) || [];
+
     return (
-        <div className="h-screen flex bg-gray-100">
+        <div className="h-screen flex" style={{ backgroundColor: theme.colors.background }}>
             {/* Left Sidebar */}
-            <div className={`bg-white shadow-lg transition-all duration-300 flex flex-col ${sidebarCollapsed ? 'w-16' : 'w-96'} border-r-4 border-blue-600`}>
+            <div className={`shadow-lg transition-all duration-300 flex flex-col ${sidebarCollapsed ? 'w-16' : 'w-96'} border-r-4`} style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }}>
                 {/* Header */}
-                <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
+                <div className="text-white p-4 flex items-center justify-between" style={{ backgroundColor: theme.colors.primary }}>
                     {!sidebarCollapsed && (
                         <div>
                             <h1 className="text-xl font-bold">GO Transit Live</h1>
@@ -168,7 +176,8 @@ export default function Index() {
                     )}
                     <button
                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="text-white hover:bg-blue-700 p-2 rounded"
+                        className="text-white p-2 rounded transition-colors"
+                        style={{ ':hover': { backgroundColor: theme.colors.primaryDark } }}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             {sidebarCollapsed ? (
@@ -183,10 +192,42 @@ export default function Index() {
                 {/* Sidebar Content */}
                 {!sidebarCollapsed && (
                     <div className="flex-1 overflow-y-auto">
-                        {/* Trip Planner */}
-                        <div className="p-4 border-b">
-                            <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-                                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        {/* View Toggle */}
+                        <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowStationList(false)}
+                                    className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
+                                        !showStationList ? 'text-white' : ''
+                                    }`}
+                                    style={{
+                                        backgroundColor: !showStationList ? theme.colors.primary : theme.colors.textSecondary + '30',
+                                        color: !showStationList ? '#ffffff' : theme.colors.text
+                                    }}
+                                >
+                                    Trip Planner
+                                </button>
+                                <button
+                                    onClick={() => setShowStationList(true)}
+                                    className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
+                                        showStationList ? 'text-white' : ''
+                                    }`}
+                                    style={{
+                                        backgroundColor: showStationList ? theme.colors.primary : theme.colors.textSecondary + '30',
+                                        color: showStationList ? '#ffffff' : theme.colors.text
+                                    }}
+                                >
+                                    Stations
+                                </button>
+                            </div>
+                        </div>
+
+                        {!showStationList ? (
+                            <>
+                                {/* Trip Planner */}
+                                <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
+                                    <h2 className="text-lg font-bold mb-3 flex items-center gap-2" style={{ color: theme.colors.text }}>
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" style={{ color: theme.colors.primary }}>
                                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                                 </svg>
                                 Plan Your Trip
@@ -195,7 +236,7 @@ export default function Index() {
                             <div className="space-y-3">
                                 {/* From Station */}
                                 <div className="relative">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
                                         From
                                     </label>
                                     <input
@@ -207,10 +248,15 @@ export default function Index() {
                                         }}
                                         onFocus={() => setShowFromDropdown(true)}
                                         placeholder="Origin station..."
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2"
+                                        style={{
+                                            borderColor: theme.colors.textSecondary,
+                                            backgroundColor: theme.colors.surface,
+                                            color: theme.colors.text
+                                        }}
                                     />
                                     {showFromDropdown && filteredFromStops.length > 0 && (
-                                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                        <div className="absolute z-20 w-full mt-1 rounded-lg shadow-lg max-h-48 overflow-y-auto" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.textSecondary}` }}>
                                             {filteredFromStops.slice(0, 8).map((stop) => (
                                                 <button
                                                     key={stop.LocationCode}
@@ -219,10 +265,16 @@ export default function Index() {
                                                         setSearchFrom(stop.LocationName);
                                                         setShowFromDropdown(false);
                                                     }}
-                                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                                                    className="w-full text-left px-3 py-2 border-b last:border-0 transition-colors"
+                                                    style={{
+                                                        borderColor: theme.colors.textSecondary + '30',
+                                                        color: theme.colors.text
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primaryLight + '20'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                 >
                                                     <div className="font-medium text-sm">{stop.LocationName}</div>
-                                                    <div className="text-xs text-gray-500">{stop.LocationCode}</div>
+                                                    <div className="text-xs" style={{ color: theme.colors.textSecondary }}>{stop.LocationCode}</div>
                                                 </button>
                                             ))}
                                         </div>
@@ -267,27 +319,27 @@ export default function Index() {
 
                                 {/* View Mode */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
                                         Time Range
                                     </label>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => setViewMode('now')}
-                                            className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
-                                                viewMode === 'now'
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                            }`}
+                                            className="flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+                                            style={{
+                                                backgroundColor: viewMode === 'now' ? theme.colors.primary : theme.colors.textSecondary + '30',
+                                                color: viewMode === 'now' ? '#ffffff' : theme.colors.text
+                                            }}
                                         >
                                             Next
                                         </button>
                                         <button
                                             onClick={() => setViewMode('day')}
-                                            className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
-                                                viewMode === 'day'
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                            }`}
+                                            className="flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+                                            style={{
+                                                backgroundColor: viewMode === 'day' ? theme.colors.primary : theme.colors.textSecondary + '30',
+                                                color: viewMode === 'day' ? '#ffffff' : theme.colors.text
+                                            }}
                                         >
                                             Full Day
                                         </button>
@@ -298,7 +350,20 @@ export default function Index() {
                                 <button
                                     onClick={handleSearch}
                                     disabled={loading || !fromStop || !toStop}
-                                    className="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
+                                    className="w-full text-white px-4 py-2 rounded-lg font-medium disabled:cursor-not-allowed transition-colors text-sm"
+                                    style={{
+                                        backgroundColor: loading || !fromStop || !toStop ? theme.colors.textSecondary + '50' : theme.colors.secondary,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!loading && fromStop && toStop) {
+                                            e.currentTarget.style.backgroundColor = theme.colors.secondaryDark;
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!loading && fromStop && toStop) {
+                                            e.currentTarget.style.backgroundColor = theme.colors.secondary;
+                                        }
+                                    }}
                                 >
                                     {loading ? 'Searching...' : 'Find Trips'}
                                 </button>
@@ -307,8 +372,8 @@ export default function Index() {
 
                         {/* Journey Results */}
                         {journeys.length > 0 && (
-                            <div className="p-4 border-b">
-                                <h3 className="text-sm font-bold mb-3">
+                            <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
+                                <h3 className="text-sm font-bold mb-3" style={{ color: theme.colors.text }}>
                                     {journeys.length} Trip{journeys.length !== 1 ? 's' : ''} Found
                                 </h3>
                                 <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -361,33 +426,88 @@ export default function Index() {
                         )}
 
                         {fromStop && toStop && !loading && journeys.length === 0 && (
-                            <div className="p-4 text-center text-sm text-gray-600">
+                            <div className="p-4 text-center text-sm" style={{ color: theme.colors.textSecondary }}>
                                 <p>No direct trips found between these stations.</p>
                             </div>
                         )}
 
                         {/* Navigation Links */}
                         <div className="p-4">
-                            <h3 className="text-sm font-bold mb-2">Quick Links</h3>
+                            <h3 className="text-sm font-bold mb-2" style={{ color: theme.colors.text }}>Quick Links</h3>
                             <div className="space-y-2">
                                 <Link
                                     href="/schedule"
-                                    className="block px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm"
+                                    className="block px-3 py-2 rounded-lg transition-colors text-sm"
+                                    style={{
+                                        backgroundColor: theme.colors.primaryLight + '20',
+                                        color: theme.colors.primary
+                                    }}
                                 >
                                     View Schedules
                                 </Link>
                             </div>
                         </div>
+                    </>
+                        ) : (
+                            /* Station List View */
+                            <div className="flex flex-col h-full">
+                                <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
+                                    <input
+                                        type="text"
+                                        value={stationSearchQuery}
+                                        onChange={(e) => setStationSearchQuery(e.target.value)}
+                                        placeholder="Search stations..."
+                                        className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2"
+                                        style={{
+                                            borderColor: theme.colors.textSecondary,
+                                            backgroundColor: theme.colors.surface,
+                                            color: theme.colors.text
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex-1 overflow-y-auto">
+                                    {filteredStations.length > 0 ? (
+                                        filteredStations.map((station) => (
+                                            <button
+                                                key={station.LocationCode}
+                                                onClick={() => {
+                                                    setSearchFrom(station.LocationName);
+                                                    setFromStop(station.LocationCode);
+                                                    setShowStationList(false);
+                                                }}
+                                                className="w-full text-left px-4 py-3 border-b transition-colors"
+                                                style={{
+                                                    borderColor: theme.colors.textSecondary + '30',
+                                                    color: theme.colors.text
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primaryLight + '20'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                            >
+                                                <div className="font-medium">{station.LocationName}</div>
+                                                <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                                                    {station.LocationCode}
+                                                </div>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 text-center text-sm" style={{ color: theme.colors.textSecondary }}>
+                                            No stations found
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Settings Button */}
-                <div className={`p-4 border-t ${sidebarCollapsed ? 'flex justify-center' : ''}`}>
+                <div className={`p-4 border-t ${sidebarCollapsed ? 'flex justify-center' : ''}`} style={{ borderColor: theme.colors.textSecondary + '40' }}>
                     <Link
                         href="/settings"
-                        className={`flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors ${
+                        className={`flex items-center gap-2 transition-colors ${
                             sidebarCollapsed ? '' : 'w-full'
                         }`}
+                        style={{ color: theme.colors.text }}
                         title="Settings"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -411,7 +531,7 @@ export default function Index() {
 
             {/* Main Content - Map */}
             <div className="flex-1 p-6">
-                <div className="h-full bg-white rounded-xl shadow-lg border-4 border-gray-300 overflow-hidden">
+                <div className="h-full rounded-xl shadow-lg border-4 overflow-hidden" style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.textSecondary + '50' }}>
                     <TransitMap onStopClick={handleStopClick} />
                 </div>
             </div>

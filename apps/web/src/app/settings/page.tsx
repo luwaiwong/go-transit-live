@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function SettingsPage() {
+    const { theme, setTheme, presets } = useTheme();
     const [openaiApiKey, setOpenaiApiKey] = useState('');
     const [isSaved, setIsSaved] = useState(false);
     const [useClientSideApi, setUseClientSideApi] = useState(false);
@@ -57,9 +59,9 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen flex flex-col" style={{ backgroundColor: theme.colors.background }}>
             {/* Header */}
-            <header className="bg-blue-600 text-white p-4 shadow-md">
+            <header className="text-white p-4 shadow-md" style={{ backgroundColor: theme.colors.primary }}>
                 <div className="container mx-auto flex items-center justify-between">
                     <h1 className="text-2xl font-bold">GO Transit - Settings</h1>
                     <nav className="flex gap-4">
@@ -79,25 +81,104 @@ export default function SettingsPage() {
             {/* Main Content */}
             <div className="flex-1 overflow-y-auto">
                 <div className="container mx-auto p-6 max-w-3xl">
-                    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div className="rounded-lg shadow-md p-6 mb-6" style={{ backgroundColor: theme.colors.surface, color: theme.colors.text }}>
                         <h2 className="text-2xl font-bold mb-6">Application Settings</h2>
+
+                        {/* Theme Section */}
+                        <div className="mb-8">
+                            <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-lg font-semibold">Theme</h3>
+                            </div>
+                            <p className="text-sm mb-4" style={{ color: theme.colors.textSecondary }}>
+                                Choose a preset theme or customize your own colors
+                            </p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>
+                                        Preset Themes
+                                    </label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {presets.map((preset) => (
+                                            <button
+                                                key={preset.id}
+                                                onClick={() => setTheme(preset)}
+                                                className={`p-4 rounded-lg border-2 transition-all ${
+                                                    theme.id === preset.id ? 'ring-2 ring-offset-2' : ''
+                                                }`}
+                                                style={{
+                                                    backgroundColor: preset.colors.surface,
+                                                    borderColor: theme.id === preset.id ? preset.colors.primary : preset.colors.textSecondary,
+                                                    color: preset.colors.text,
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex gap-1">
+                                                        <div
+                                                            className="w-6 h-6 rounded"
+                                                            style={{ backgroundColor: preset.colors.primary }}
+                                                        />
+                                                        <div
+                                                            className="w-6 h-6 rounded"
+                                                            style={{ backgroundColor: preset.colors.secondary }}
+                                                        />
+                                                        <div
+                                                            className="w-6 h-6 rounded"
+                                                            style={{ backgroundColor: preset.colors.accent }}
+                                                        />
+                                                    </div>
+                                                    <span className="font-medium text-sm">{preset.name}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Current Theme Preview */}
+                                <div className="p-4 rounded-lg border" style={{ borderColor: theme.colors.textSecondary }}>
+                                    <h4 className="text-sm font-medium mb-3" style={{ color: theme.colors.text }}>
+                                        Current Theme: {theme.name}
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                            <span style={{ color: theme.colors.textSecondary }}>Primary: </span>
+                                            <span className="font-mono">{theme.colors.primary}</span>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: theme.colors.textSecondary }}>Secondary: </span>
+                                            <span className="font-mono">{theme.colors.secondary}</span>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: theme.colors.textSecondary }}>Accent: </span>
+                                            <span className="font-mono">{theme.colors.accent}</span>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: theme.colors.textSecondary }}>Background: </span>
+                                            <span className="font-mono">{theme.colors.background}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="border-t mb-8" style={{ borderColor: theme.colors.textSecondary }}></div>
 
                         {/* OpenAI API Key Section */}
                         <div className="mb-8">
                             <div className="flex items-center gap-2 mb-2">
                                 <h3 className="text-lg font-semibold">OpenAI API Key</h3>
-                                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: theme.colors.primaryLight + '30', color: theme.colors.primary }}>
                                     Optional
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-600 mb-4">
+                            <p className="text-sm mb-4" style={{ color: theme.colors.textSecondary }}>
                                 Provide your own OpenAI API key for client-side API calls. This bypasses
                                 the backend and allows you to use your own OpenAI quota.
                             </p>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>
                                         API Key
                                     </label>
                                     <input
@@ -105,10 +186,15 @@ export default function SettingsPage() {
                                         value={openaiApiKey}
                                         onChange={(e) => setOpenaiApiKey(e.target.value)}
                                         placeholder="sk-..."
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                                        style={{
+                                            borderColor: theme.colors.textSecondary,
+                                            backgroundColor: theme.colors.surface,
+                                            color: theme.colors.text
+                                        }}
                                     />
                                     {openaiApiKey && (
-                                        <p className="text-xs text-gray-500 mt-1">
+                                        <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>
                                             Key preview: {maskApiKey(openaiApiKey)}
                                         </p>
                                     )}
@@ -120,11 +206,12 @@ export default function SettingsPage() {
                                         id="useClientSideApi"
                                         checked={useClientSideApi}
                                         onChange={(e) => setUseClientSideApi(e.target.checked)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        className="h-4 w-4 rounded"
                                     />
                                     <label
                                         htmlFor="useClientSideApi"
-                                        className="ml-2 block text-sm text-gray-700"
+                                        className="ml-2 block text-sm"
+                                        style={{ color: theme.colors.text }}
                                     >
                                         Enable client-side API calls using my API key
                                     </label>
@@ -237,13 +324,22 @@ export default function SettingsPage() {
                         <div className="flex gap-3">
                             <button
                                 onClick={handleSave}
-                                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                                className="flex-1 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                                style={{
+                                    backgroundColor: theme.colors.primary,
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primaryDark}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary}
                             >
                                 Save Settings
                             </button>
                             <button
                                 onClick={handleClear}
-                                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                                className="px-6 py-3 rounded-lg font-medium transition-colors"
+                                style={{
+                                    backgroundColor: theme.colors.textSecondary + '30',
+                                    color: theme.colors.text
+                                }}
                             >
                                 Clear All
                             </button>

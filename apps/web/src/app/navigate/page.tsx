@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface Stop {
     LocationCode: string;
@@ -38,6 +39,7 @@ interface Journey {
 }
 
 export default function NavigatePage() {
+    const { theme } = useTheme();
     const [stops, setStops] = useState<Stop[]>([]);
     const [fromStop, setFromStop] = useState('');
     const [toStop, setToStop] = useState('');
@@ -125,9 +127,9 @@ export default function NavigatePage() {
     };
 
     return (
-        <div className="h-screen flex flex-col bg-gray-50">
+        <div className="h-screen flex flex-col" style={{ backgroundColor: theme.colors.background }}>
             {/* Header */}
-            <header className="bg-blue-600 text-white p-4 shadow-md">
+            <header className="text-white p-4 shadow-md" style={{ backgroundColor: theme.colors.primary }}>
                 <div className="container mx-auto flex items-center justify-between">
                     <h1 className="text-2xl font-bold">GO Transit - Trip Planner</h1>
                     <nav className="flex gap-4">
@@ -148,9 +150,9 @@ export default function NavigatePage() {
             <div className="flex-1 overflow-y-auto">
                 <div className="container mx-auto p-6 max-w-4xl">
                     {/* Search Form */}
-                    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                        <h2 className="text-xl font-bold mb-4">Plan Your Journey</h2>
-                        <p className="text-sm text-gray-600 mb-4">
+                    <div className="rounded-lg shadow-md p-6 mb-6" style={{ backgroundColor: theme.colors.surface }}>
+                        <h2 className="text-xl font-bold mb-4" style={{ color: theme.colors.text }}>Plan Your Journey</h2>
+                        <p className="text-sm mb-4" style={{ color: theme.colors.textSecondary }}>
                             Find direct trips between stations (same line only, no transfers)
                         </p>
 
@@ -264,7 +266,20 @@ export default function NavigatePage() {
                             <button
                                 onClick={handleSearch}
                                 disabled={loading || !fromStop || !toStop}
-                                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                className="w-full text-white px-6 py-3 rounded-lg font-bold disabled:cursor-not-allowed transition-colors"
+                                style={{
+                                    backgroundColor: loading || !fromStop || !toStop ? theme.colors.textSecondary + '50' : theme.colors.secondary,
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!loading && fromStop && toStop) {
+                                        e.currentTarget.style.backgroundColor = theme.colors.secondaryDark;
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!loading && fromStop && toStop) {
+                                        e.currentTarget.style.backgroundColor = theme.colors.secondary;
+                                    }
+                                }}
                             >
                                 {loading ? 'Searching...' : 'Find Trips'}
                             </button>

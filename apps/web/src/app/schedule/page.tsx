@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Dynamically import TransitMap with no SSR
 const TransitMap = dynamic(() => import('../../components/TransitMap'), {
@@ -47,6 +48,7 @@ interface NextService {
 }
 
 export default function SchedulePage() {
+    const { theme } = useTheme();
     const [stops, setStops] = useState<Stop[]>([]);
     const [selectedStop, setSelectedStop] = useState<StopDetails | null>(null);
     const [services, setServices] = useState<NextService[]>([]);
@@ -92,11 +94,11 @@ export default function SchedulePage() {
         }
     };
 
-    const filteredStops = stops.filter(
+    const filteredStops = stops?.filter(
         (stop) =>
-            stop.LocationName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            stop.LocationCode.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+            stop.LocationName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            stop.LocationCode?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
 
     const formatTime = (timeStr: string) => {
         try {
@@ -128,9 +130,9 @@ export default function SchedulePage() {
     };
 
     return (
-        <div className="h-screen flex flex-col">
+        <div className="h-screen flex flex-col" style={{ backgroundColor: theme.colors.background }}>
             {/* Header */}
-            <header className="bg-blue-600 text-white p-4 shadow-md">
+            <header className="text-white p-4 shadow-md" style={{ backgroundColor: theme.colors.primary }}>
                 <div className="container mx-auto flex items-center justify-between">
                     <h1 className="text-2xl font-bold">GO Transit - Station Schedule</h1>
                     <nav className="flex gap-4">
@@ -150,15 +152,20 @@ export default function SchedulePage() {
             {/* Main Content */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Sidebar */}
-                <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
+                <div className="w-96 border-r flex flex-col" style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.textSecondary + '40' }}>
                     {/* Search */}
-                    <div className="p-4 border-b border-gray-200">
+                    <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
                         <input
                             type="text"
                             placeholder="Search stations..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                            style={{
+                                borderColor: theme.colors.textSecondary,
+                                backgroundColor: theme.colors.surface,
+                                color: theme.colors.text
+                            }}
                         />
                     </div>
 
@@ -168,25 +175,38 @@ export default function SchedulePage() {
                             <button
                                 key={stop.LocationCode}
                                 onClick={() => handleStopSelect(stop)}
-                                className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-blue-50 transition-colors ${
-                                    selectedStop?.LocationCode === stop.LocationCode ? 'bg-blue-100' : ''
-                                }`}
+                                className="w-full text-left px-4 py-3 border-b transition-colors"
+                                style={{
+                                    borderColor: theme.colors.textSecondary + '30',
+                                    backgroundColor: selectedStop?.LocationCode === stop.LocationCode ? theme.colors.primaryLight + '30' : 'transparent',
+                                    color: theme.colors.text
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (selectedStop?.LocationCode !== stop.LocationCode) {
+                                        e.currentTarget.style.backgroundColor = theme.colors.primaryLight + '20';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (selectedStop?.LocationCode !== stop.LocationCode) {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                    }
+                                }}
                             >
                                 <div className="font-medium">{stop.LocationName}</div>
-                                <div className="text-xs text-gray-500">{stop.LocationCode}</div>
+                                <div className="text-xs" style={{ color: theme.colors.textSecondary }}>{stop.LocationCode}</div>
                             </button>
                         ))}
                     </div>
                 </div>
 
                 {/* Schedule Content */}
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: theme.colors.background }}>
                     {selectedStop ? (
                         <>
                             {/* Station Info */}
-                            <div className="bg-gray-50 p-4 border-b border-gray-200">
-                                <h2 className="text-xl font-bold">{selectedStop.LocationName}</h2>
-                                <p className="text-sm text-gray-600">
+                            <div className="p-4 border-b" style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.textSecondary + '40' }}>
+                                <h2 className="text-xl font-bold" style={{ color: theme.colors.text }}>{selectedStop.LocationName}</h2>
+                                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
                                     Station Code: {selectedStop.LocationCode}
                                 </p>
                             </div>
@@ -196,12 +216,12 @@ export default function SchedulePage() {
                                 {loading ? (
                                     <div className="flex items-center justify-center h-full">
                                         <div className="text-center">
-                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
                                             <p>Loading departures...</p>
                                         </div>
                                     </div>
                                 ) : services.length === 0 ? (
-                                    <div className="text-center text-gray-500 mt-8">
+                                    <div className="text-center mt-8" style={{ color: theme.colors.textSecondary }}>
                                         No upcoming departures found for this station.
                                     </div>
                                 ) : (
@@ -219,7 +239,8 @@ export default function SchedulePage() {
                                             return (
                                                 <div
                                                     key={`${service.TripNumber}-${index}`}
-                                                    className="bg-white rounded-lg shadow p-4 border border-gray-200"
+                                                    className="rounded-lg shadow p-4 border"
+                                                    style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.textSecondary + '40' }}
                                                 >
                                                     <div className="flex items-start justify-between">
                                                         <div className="flex-1">
@@ -284,7 +305,7 @@ export default function SchedulePage() {
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center text-gray-500">
+                        <div className="flex-1 flex items-center justify-center" style={{ color: theme.colors.textSecondary }}>
                             <div className="text-center">
                                 <svg
                                     className="w-16 h-16 mx-auto mb-4 text-gray-300"
