@@ -65,12 +65,12 @@ export async function fetchStops(): Promise<Stop[]> {
     const data = await metrolinxFetch("/stop/all");
 
     // Ensure result exists and is an array
-    if (!data || !data.result || !Array.isArray(data.result)) {
+    if (!data || !data.Stations || !Array.isArray(data.Stations.Station)) {
         console.error("Invalid response structure from /stop/all:", data);
         return [];
     }
 
-    return data.result;
+    return data.Stations.Station;
 }
 
 export async function fetchLines(): Promise<Line[]> {
