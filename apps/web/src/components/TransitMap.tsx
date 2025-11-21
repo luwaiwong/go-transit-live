@@ -30,6 +30,7 @@ interface VehiclePosition {
             latitude: number;
             longitude: number;
             bearing?: number;
+            speed?: number;
         };
         vehicle?: {
             id: string;
@@ -37,6 +38,13 @@ interface VehiclePosition {
         };
     };
 }
+
+// Helper function to convert bearing to compass direction
+const getDirectionFromBearing = (bearing: number): string => {
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const index = Math.round(bearing / 45) % 8;
+    return directions[index];
+};
 
 // Fix Leaflet default marker icon issue with Next.js
 const fixLeafletIcons = () => {
@@ -48,12 +56,12 @@ const fixLeafletIcons = () => {
     });
 };
 
-// Create custom icons for trains and stations
+// Create custom icons for trains, buses and stations
 const trainIcon = new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
             <circle cx="16" cy="16" r="12" fill="#00A850" stroke="white" stroke-width="3"/>
-            <circle cx="16" cy="16" r="6" fill="white"/>
+            <text x="16" y="21" font-family="Arial" font-size="14" font-weight="bold" fill="white" text-anchor="middle">T</text>
         </svg>
     `),
     iconSize: [32, 32],
@@ -61,11 +69,35 @@ const trainIcon = new L.Icon({
     popupAnchor: [0, -16],
 });
 
-const stationIcon = new L.Icon({
+const busIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+            <rect x="4" y="8" width="24" height="16" rx="3" fill="#FF6B00" stroke="white" stroke-width="3"/>
+            <text x="16" y="21" font-family="Arial" font-size="14" font-weight="bold" fill="white" text-anchor="middle">B</text>
+        </svg>
+    `),
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
+});
+
+const trainStationIcon = new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="8" fill="#0066CC" stroke="white" stroke-width="2"/>
-            <circle cx="12" cy="12" r="4" fill="white"/>
+            <text x="12" y="15.5" font-family="Arial" font-size="10" font-weight="bold" fill="white" text-anchor="middle">T</text>
+        </svg>
+    `),
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+});
+
+const busStopIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <rect x="4" y="4" width="16" height="16" rx="2" fill="#FF6B00" stroke="white" stroke-width="2"/>
+            <text x="12" y="15.5" font-family="Arial" font-size="10" font-weight="bold" fill="white" text-anchor="middle">B</text>
         </svg>
     `),
     iconSize: [24, 24],
@@ -108,7 +140,14 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
         const fetchStopsData = async () => {
             try {
                 const response = await fetch('/api/stops');
-                const allStops: Stop[] = await response.json();
+                const allStops: Stop[] | { error: string } = await response.json();
+
+                // Validate that allStops is an array
+                if (!Array.isArray(allStops)) {
+                    console.error('Invalid stops data received:', allStops);
+                    setLoading(false);
+                    return;
+                }
 
                 // Fetch details for each stop to get coordinates
                 const stopsWithDetails = await Promise.all(
@@ -205,11 +244,21 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                     const lng = parseFloat(stop.Longitude);
                     const isHighlighted = highlightedStops.includes(stop.LocationCode);
 
+                    // Choose icon based on type
+                    let icon;
+                    if (isHighlighted) {
+                        icon = highlightedStationIcon;
+                    } else if (stop.IsBus && !stop.IsTrain) {
+                        icon = busStopIcon;
+                    } else {
+                        icon = trainStationIcon;
+                    }
+
                     return (
                         <Marker
                             key={stop.LocationCode}
                             position={[lat, lng]}
-                            icon={isHighlighted ? highlightedStationIcon : stationIcon}
+                            icon={icon}
                             eventHandlers={{
                                 click: () => onStopClick?.(stop),
                             }}
@@ -231,27 +280,64 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                     const pos = vehicle.vehicle.position;
                     if (!pos) return null;
 
+                    const vehicleLabel = vehicle.vehicle.vehicle?.label || vehicle.vehicle.vehicle?.id || vehicle.id;
+                    const routeName = vehicle.vehicle.trip?.routeId;
+                    const speedKmh = pos.speed !== undefined ? (pos.speed * 3.6).toFixed(0) : null;
+
+                    // Determine if it's a bus or train based on route ID
+                    // GO Transit buses have route IDs starting with numbers (e.g., "12", "40")
+                    // Trains have route IDs like "LW", "KI", "ST", etc.
+                    const isBus = routeName ? /^\d+/.test(routeName) : false;
+                    const vehicleIcon = isBus ? busIcon : trainIcon;
+                    const vehicleType = isBus ? 'Bus' : 'Train';
+
                     return (
                         <Marker
                             key={vehicle.id}
                             position={[pos.latitude, pos.longitude]}
-                            icon={trainIcon}
+                            icon={vehicleIcon}
                         >
                             <Popup>
-                                <div className="text-sm">
-                                    <h3 className="font-bold">Train {vehicle.vehicle.vehicle?.label || vehicle.id}</h3>
-                                    {vehicle.vehicle.trip && (
-                                        <>
-                                            <p className="text-xs">Route: {vehicle.vehicle.trip.routeId}</p>
-                                            <p className="text-xs">Trip: {vehicle.vehicle.trip.tripId}</p>
-                                        </>
+                                <div className="text-sm min-w-[200px]">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className={`${isBus ? 'bg-orange-500' : 'bg-green-500'} text-white rounded-full w-6 h-6 flex items-center justify-center text-xs`}>
+                                            {isBus ? 'B' : 'T'}
+                                        </div>
+                                        <h3 className="font-bold text-base">{vehicleType} {vehicleLabel}</h3>
+                                    </div>
+                                    {routeName && (
+                                        <div className="mb-2 p-2 bg-blue-50 rounded">
+                                            <p className="text-xs text-gray-600">Route</p>
+                                            <p className="font-semibold text-blue-700">{routeName}</p>
+                                        </div>
                                     )}
-                                    {pos.bearing !== undefined && (
-                                        <p className="text-xs">Bearing: {pos.bearing}°</p>
-                                    )}
-                                    {pos.speed !== undefined && (
-                                        <p className="text-xs">Speed: {pos.speed.toFixed(1)} m/s</p>
-                                    )}
+                                    <div className="space-y-1 text-xs text-gray-600">
+                                        {speedKmh !== null && (
+                                            <div className="flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                                </svg>
+                                                <span><strong>Speed:</strong> {speedKmh} km/h</span>
+                                            </div>
+                                        )}
+                                        {pos.bearing !== undefined && (
+                                            <div className="flex items-center gap-2">
+                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                                </svg>
+                                                <span><strong>Heading:</strong> {pos.bearing}° {getDirectionFromBearing(pos.bearing)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                            </svg>
+                                            <span><strong>Position:</strong> {pos.latitude.toFixed(4)}, {pos.longitude.toFixed(4)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                                        Live tracking data
+                                    </div>
                                 </div>
                             </Popup>
                         </Marker>

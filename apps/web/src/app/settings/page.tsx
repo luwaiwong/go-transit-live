@@ -7,17 +7,22 @@ export default function SettingsPage() {
     const [openaiApiKey, setOpenaiApiKey] = useState('');
     const [isSaved, setIsSaved] = useState(false);
     const [useClientSideApi, setUseClientSideApi] = useState(false);
+    const [debugApiLogging, setDebugApiLogging] = useState(false);
 
     useEffect(() => {
         // Load saved settings from localStorage
         const savedApiKey = localStorage.getItem('openai_api_key');
         const savedUseClientSide = localStorage.getItem('use_client_side_api');
+        const savedDebugLogging = localStorage.getItem('debug_api_logging');
 
         if (savedApiKey) {
             setOpenaiApiKey(savedApiKey);
         }
         if (savedUseClientSide === 'true') {
             setUseClientSideApi(true);
+        }
+        if (savedDebugLogging === 'true') {
+            setDebugApiLogging(true);
         }
     }, []);
 
@@ -29,6 +34,7 @@ export default function SettingsPage() {
             localStorage.removeItem('openai_api_key');
         }
         localStorage.setItem('use_client_side_api', useClientSideApi.toString());
+        localStorage.setItem('debug_api_logging', debugApiLogging.toString());
 
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 3000);
@@ -37,8 +43,10 @@ export default function SettingsPage() {
     const handleClear = () => {
         setOpenaiApiKey('');
         setUseClientSideApi(false);
+        setDebugApiLogging(false);
         localStorage.removeItem('openai_api_key');
         localStorage.removeItem('use_client_side_api');
+        localStorage.removeItem('debug_api_logging');
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 3000);
     };
@@ -148,6 +156,39 @@ export default function SettingsPage() {
                                         </p>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Debug Logging Section */}
+                        <div className="mb-8 pt-8 border-t border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-lg font-semibold">Developer Options</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Advanced options for debugging and development.
+                            </p>
+
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="debugApiLogging"
+                                    checked={debugApiLogging}
+                                    onChange={(e) => setDebugApiLogging(e.target.checked)}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <label
+                                    htmlFor="debugApiLogging"
+                                    className="ml-2 block text-sm text-gray-700"
+                                >
+                                    Enable full API response logging in browser console
+                                </label>
+                            </div>
+
+                            <div className="mt-2 bg-gray-50 border-l-4 border-gray-400 p-3">
+                                <p className="text-xs text-gray-600">
+                                    When enabled, complete API responses from Metrolinx will be logged to the browser console.
+                                    This is useful for debugging but may clutter your console.
+                                </p>
                             </div>
                         </div>
 

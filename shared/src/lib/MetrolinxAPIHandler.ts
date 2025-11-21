@@ -4,7 +4,7 @@ import { Stop, Line, StopDetails, NextService, NextServiceResponse, Journey, Ser
 const METROLINX_API_URL = "https://api.openmetrolinx.com/OpenDataAPI/api/V1";
 const METROLINX_API_KEY = process.env.NX_EXPO_METROLINX_API_KEY;
 
-const DEBUG = true;
+const DEBUG = process.env.NX_DEBUG_API_LOGGING === 'true' || false;
 
 function formatDateYYYYMMDD(date: Date): string {
     return date.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '');
