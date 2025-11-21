@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -150,8 +150,9 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                 }
 
                 // Fetch details for each stop to get coordinates
+                // Increased limit and show both train and bus stations
                 const stopsWithDetails = await Promise.all(
-                    allStops.slice(0, 50).map(async (stop) => {
+                    allStops.slice(0, 100).map(async (stop) => {
                         try {
                             const detailsResponse = await fetch(`/api/stop-details/${stop.LocationCode}`);
                             const details = await detailsResponse.json();
@@ -169,9 +170,11 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                         stop.Latitude &&
                         stop.Longitude &&
                         !isNaN(parseFloat(stop.Latitude)) &&
-                        !isNaN(parseFloat(stop.Longitude)) &&
-                        stop.IsTrain
+                        !isNaN(parseFloat(stop.Longitude))
+                        // Show all stops (both train and bus)
                     );
+
+                console.log(`Loaded ${validStops.length} stations on map`);
 
                 setStops(validStops);
                 setLoading(false);

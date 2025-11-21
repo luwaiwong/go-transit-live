@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTheme } from '../contexts/ThemeContext';
 import DateSelector from '../components/DateSelector';
+import MapLegend from '../components/MapLegend';
 
 // Dynamically import TransitMap with no SSR
 const TransitMap = dynamic(() => import('../components/TransitMap'), {
@@ -66,7 +67,6 @@ export default function Index() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const [selectedStop, setSelectedStop] = useState<StopDetails | null>(null);
     const [stops, setStops] = useState<Stop[]>([]);
     const [fromStop, setFromStop] = useState('');
     const [toStop, setToStop] = useState('');
@@ -102,7 +102,6 @@ export default function Index() {
     }, []);
 
     const handleStopClick = (stop: StopDetails) => {
-        setSelectedStop(stop);
         setSearchFrom(stop.LocationName);
         setFromStop(stop.LocationCode);
     };
@@ -476,10 +475,11 @@ export default function Index() {
                                     )}
                                 </div>
 
-                                {/* Date Selector */}
+                                {/* Date and Time Selector */}
                                 <DateSelector
                                     selectedDate={selectedDate}
                                     onDateChange={setSelectedDate}
+                                    showTimePicker={true}
                                 />
 
                                 {/* Search Button */}
@@ -667,10 +667,15 @@ export default function Index() {
                 </div>
             </div>
 
-            {/* Main Content - Map */}
-            <div className="flex-1 p-6">
-                <div className="h-full rounded-xl shadow-lg border-4 overflow-hidden" style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.textSecondary + '50' }}>
+            {/* Main Content - Map with Legend */}
+            <div className="flex-1 p-6 flex gap-6">
+                <div className="flex-1 rounded-xl shadow-lg border-4 overflow-hidden" style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.textSecondary + '50' }}>
                     <TransitMap onStopClick={handleStopClick} />
+                </div>
+
+                {/* Legend on the right */}
+                <div className="w-72 flex-shrink-0">
+                    <MapLegend />
                 </div>
             </div>
         </div>

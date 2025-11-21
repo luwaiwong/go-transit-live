@@ -6,11 +6,16 @@ import { useTheme } from '../contexts/ThemeContext';
 interface DateSelectorProps {
     selectedDate: Date;
     onDateChange: (date: Date) => void;
+    showTimePicker?: boolean;
 }
 
-export default function DateSelector({ selectedDate, onDateChange }: DateSelectorProps) {
+export default function DateSelector({ selectedDate, onDateChange, showTimePicker = false }: DateSelectorProps) {
     const { theme } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
+    const [selectedTime, setSelectedTime] = useState({
+        hour: selectedDate.getHours(),
+        minute: selectedDate.getMinutes(),
+    });
 
     const formatDate = (date: Date) => {
         const today = new Date();
@@ -43,11 +48,34 @@ export default function DateSelector({ selectedDate, onDateChange }: DateSelecto
 
     const nextDays = getNextDays(7); // Show next 7 days
 
+    const handleTimeChange = (hour: number, minute: number) => {
+        const newDate = new Date(selectedDate);
+        newDate.setHours(hour, minute, 0, 0);
+        setSelectedTime({ hour, minute });
+        onDateChange(newDate);
+    };
+
+    const formatTime = (hour: number, minute: number) => {
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        const displayMinute = minute.toString().padStart(2, '0');
+        return `${displayHour}:${displayMinute} ${period}`;
+    };
+
+    // Generate time options (every 15 minutes)
+    const timeOptions = [];
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 15) {
+            timeOptions.push({ hour: h, minute: m });
+        }
+    }
+
     return (
-        <div className="relative">
-            <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
-                Date
-            </label>
+        <div className="space-y-3">
+            <div className="relative">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
+                    Date
+                </label>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 flex items-center justify-between"
@@ -123,6 +151,42 @@ export default function DateSelector({ selectedDate, onDateChange }: DateSelecto
                         ))}
                     </div>
                 </>
+            )}
+            </div>
+
+            {/* Time Picker */}
+            {showTimePicker && (
+                <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
+                        Time
+                    </label>
+                    <div className="relative">
+                        <select
+                            value={`${selectedTime.hour}:${selectedTime.minute}`}
+                            onChange={(e) => {
+                                const [hour, minute] = e.target.value.split(':').map(Number);
+                                handleTimeChange(hour, minute);
+                            }}
+                            className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2"
+                            style={{
+                                borderColor: theme.colors.textSecondary,
+                                backgroundColor: theme.colors.surface,
+                                color: theme.colors.text,
+                            }}
+                        >
+                            {timeOptions.map(({ hour, minute }) => (
+                                <option key={`${hour}:${minute}`} value={`${hour}:${minute}`}>
+                                    {formatTime(hour, minute)}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" style={{ color: theme.colors.textSecondary }}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
