@@ -286,9 +286,14 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                     let icon;
                     if (isHighlighted) {
                         icon = highlightedStationIcon;
+                    } else if (stop.IsTrain && !stop.IsBus) {
+                        // Train-only station
+                        icon = trainStationIcon;
                     } else if (stop.IsBus && !stop.IsTrain) {
+                        // Bus-only stop
                         icon = busStopIcon;
                     } else {
+                        // Mixed or default - use train icon
                         icon = trainStationIcon;
                     }
 
@@ -322,12 +327,19 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                     const routeName = vehicle.vehicle.trip?.routeId;
                     const speedKmh = pos.speed !== undefined ? (pos.speed * 3.6).toFixed(0) : null;
 
-                    // Determine if it's a bus or train based on route ID
-                    // GO Transit buses have route IDs starting with numbers (e.g., "12", "40")
-                    // Trains have route IDs like "LW", "KI", "ST", etc.
-                    const isBus = routeName ? /^\d+/.test(routeName) : false;
+                    // Determine if it's a bus or train based on route ID digit count
+                    // Route number is the last part of the route ID
+                    // Trains have 4-digit route IDs, buses have 5-digit route IDs
+                    const extractDigits = (id: string) => id?.match(/\d+$/)?.[0] || '';
+                    const routeDigits = extractDigits(routeName || '');
+                    const isBus = routeDigits.length === 5;
                     const vehicleIcon = isBus ? busIcon : trainIcon;
                     const vehicleType = isBus ? 'Bus' : 'Train';
+
+                    // Debug logging to verify classification
+                    if (routeName) {
+                        console.log(`Vehicle ${vehicleLabel}: RouteID="${routeName}", Digits="${routeDigits}" (${routeDigits.length}), Type=${vehicleType}`);
+                    }
 
                     return (
                         <Marker
