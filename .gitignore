@@ -63,5 +63,8 @@ cache/
 out
 
 # Environment variables
-.env.local
 .env
+.env.local
+.env*.local
+.env.*
+!.env.example
