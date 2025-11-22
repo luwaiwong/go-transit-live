@@ -1,126 +1,49 @@
-# GO Transit Live
+# go transit ontario trackers
 
-Real-time tracking of Ontario GO Transit trains and buses with multiple platform support.
+> react web and react native app nx monorepo, for tracking go transit trains in ontario
 
-## Project Structure
+the goal of this project is to create a sleek and modern interface for tracking
+- departure and arrival times at various go stations
+- live go train locations
 
-This repository contains three main applications:
+## commands
 
-### 1. Python/Dash Web App (Original)
-Located in the root directory - A Python-based web application using Dash and Plotly.
+```sh
+// see graph
+npx nx graph
 
-### 2. Next.js API
-Located in `src/` - API endpoints for serving station and vehicle data.
+// native app commands
+npx nx serve app // run
+npx nx build app // build
+npx nx show project app // show targets
 
-### 3. React Native Mobile App
-Located in `apps/app/` - Cross-platform mobile app for iOS and Android.
+// web app commands
+npx nx dev web // run
+npx nx build web // build
 
-## Features
-
-- 🚆 **Live Train Tracking**: Real-time train positions
-- 🚌 **Bus Tracking**: Live bus locations
-- 📍 **Station Information**: Complete station details and locations
-- 🗺️ **Interactive Map**: Zoom, pan, and explore the transit system
-- 🎨 **Theme Support**: Light, dark, and auto themes (mobile)
-- 📱 **Cross-Platform**: Web and mobile support
-
-## Quick Start
-
-### Python/Dash Web App
-
-1. Install Python dependencies:
-```bash
-pip install dash plotly pandas requests
-```
-
-2. Create `config.py` with your API key:
-```python
-API_KEY = "your_api_key_here"
-```
-
-3. Fetch station data:
-```bash
-python fetch_stations.py
-```
-
-4. Run the web app:
-```bash
-python render_map.py
-```
-
-5. Open http://127.0.0.1:8050/
-
-### Next.js API
-
-1. Install dependencies:
-```bash
+// install 
 npm install
+npm install <package-name> -w @go-transit-ontario/<library/app>
 ```
 
-2. Run the development server:
-```bash
-npm run dev
+## adding new projects
+
+While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
+
+Use the plugin's generator to create new projects.
+
+To generate a new application, use:
+
+```sh
+npx nx g @nx/expo:app demo
 ```
 
-3. API endpoints will be available at:
-- http://localhost:3000/api/stop-details/:id
-- http://localhost:3000/api/vehicle-positions
+To generate a new library, use:
 
-### React Native Mobile App
-
-1. Navigate to the app directory:
-```bash
-cd apps/app
+```sh
+npx nx g @nx/react:lib mylib
 ```
 
-2. Install dependencies:
-```bash
-npm install
-```
+You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
 
-3. Start Expo:
-```bash
-npm start
-```
-
-4. Scan the QR code with Expo Go app (iOS/Android)
-
-For more details, see [apps/app/README.md](apps/app/README.md)
-
-## Data Sources
-
-This project uses the Metrolinx Open Data API to fetch real-time GO Transit information.
-
-- **API Documentation**: https://www.metrolinx.com/en/about-us/open-data
-- **Station Details**: Cached in `station_details.json`
-- **Vehicle Positions**: Real-time GTFS feed
-
-## Development
-
-### Project Layout
-
-```
-go-transit-live/
-├── apps/
-│   └── app/              # React Native mobile app
-│       ├── app/          # Expo Router pages
-│       ├── src/          # Source code
-│       └── assets/       # Images and icons
-├── src/
-│   └── app/
-│       └── api/          # Next.js API routes
-├── fetch_stations.py     # Station data fetcher
-├── render_map.py         # Dash web application
-└── station_details.json  # Cached station data
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## License
-
-MIT
+[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
