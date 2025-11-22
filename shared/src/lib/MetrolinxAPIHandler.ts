@@ -82,9 +82,61 @@ export async function fetchLines(): Promise<Line[]> {
 
 export async function fetchStopDetails(stopId: string): Promise<StopDetails | null> {
     if (!stopId) return null;
-    console.log(`Fetching details for stop: ${stopId}`);
-    const data = await metrolinxFetch(`/stop/details/${stopId}`);
-    return data.result;
+    console.log(`[fetchStopDetails] Fetching details for stop: ${stopId}`);
+
+    try {
+        const data = await metrolinxFetch(`/stop/details/${stopId}`);
+
+        console.log('[fetchStopDetails] API Response:', {
+            hasData: !!data,
+            keys: data ? Object.keys(data) : [],
+            hasResult: data && 'result' in data,
+            resultType: typeof data?.result,
+            resultValue: data?.result
+        });
+
+        // Check if result exists and is not undefined
+        if (data && data.result !== undefined && data.result !== null) {
+            return data.result;
+        }
+
+        console.log('[fetchStopDetails] No result in API response, trying alternate property');
+
+        // Try alternate response structures
+        if (data && typeof data === 'object') {
+            // Check if the data itself is the stop details
+            if ('LocationCode' in data) {
+                return data as StopDetails;
+            }
+            // Check for common alternate property names
+            for (const prop of ['Stop', 'StopDetail', 'Station', 'data']) {
+                if (data[prop]) {
+                    console.log(`[fetchStopDetails] Found data in ${prop} property`);
+                    return data[prop];
+                }
+            }
+        }
+
+        console.warn(`[fetchStopDetails] No valid stop details found in response for ${stopId}`);
+        return null;
+    } catch (error) {
+        console.error(`[fetchStopDetails] Error fetching stop details for ${stopId}:`, error);
+        // If /stop/details fails, fall back to basic stop info from /stop/all
+        console.log(`[fetchStopDetails] Falling back to basic stop info from /stop/all`);
+        try {
+            const allStopsData = await metrolinxFetch('/stop/all');
+            if (allStopsData?.Stations?.Station) {
+                const stop = allStopsData.Stations.Station.find((s: Stop) => s.LocationCode === stopId);
+                if (stop) {
+                    console.log(`[fetchStopDetails] Found basic stop info for ${stopId}`);
+                    return stop as StopDetails;
+                }
+            }
+        } catch (fallbackError) {
+            console.error(`[fetchStopDetails] Fallback also failed:`, fallbackError);
+        }
+        return null;
+    }
 }
 
 export async function fetchServiceForStop(stop: string): Promise<NextServiceResponse | null> {
