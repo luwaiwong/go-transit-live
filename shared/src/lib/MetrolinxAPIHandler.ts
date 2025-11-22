@@ -1,10 +1,21 @@
-
-import { Stop, Line, StopDetails, NextService, NextServiceResponse, Journey, Service, UIServiceInfo } from './MetrolinxTypes';
+import { Stop, Line, StopDetails, NextService, NextServiceResponse, Journey, Service, UIServiceInfo, VehiclePositionResponse } from './MetrolinxTypes';
+import { ProxyAgent, fetch as undiciFetch } from 'undici';
 
 const METROLINX_API_URL = "https://api.openmetrolinx.com/OpenDataAPI/api/V1";
 const METROLINX_API_KEY = process.env.NX_EXPO_METROLINX_API_KEY;
 
-const DEBUG = true;
+const DEBUG = process.env.NX_DEBUG_API_LOGGING === 'true' || false;
+
+// Configure proxy agent if proxy environment variables are set
+const HTTPS_PROXY = process.env.https_proxy || process.env.HTTPS_PROXY;
+const HTTP_PROXY = process.env.http_proxy || process.env.HTTP_PROXY;
+const PROXY_URL = HTTPS_PROXY || HTTP_PROXY;
+
+let proxyAgent: ProxyAgent | undefined;
+if (PROXY_URL) {
+    console.log(`Using proxy: ${PROXY_URL.replace(/\/\/.*@/, '//***@')}`); // Hide credentials in logs
+    proxyAgent = new ProxyAgent(PROXY_URL);
+}
 
 function formatDateYYYYMMDD(date: Date): string {
     return date.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '');
@@ -26,7 +37,14 @@ async function metrolinxFetch(endpoint: string): Promise<any> {
     }
     const url = `${METROLINX_API_URL}${endpoint}?key=${METROLINX_API_KEY}`;
     if (DEBUG) console.log("Fetching:", url);
-    const response = await fetch(url);
+
+    // Use undici fetch with proxy support if proxy is configured
+    const fetchOptions: any = {};
+    if (proxyAgent) {
+        fetchOptions.dispatcher = proxyAgent;
+    }
+
+    const response = await undiciFetch(url, fetchOptions);
     if (!response.ok) {
         const errorText = await response.text();
         console.error("Metrolinx API Error:", response.status, errorText);
@@ -45,7 +63,14 @@ async function metrolinxFetch(endpoint: string): Promise<any> {
 export async function fetchStops(): Promise<Stop[]> {
     console.log("Fetching all active stops");
     const data = await metrolinxFetch("/stop/all");
-    return data.result;
+
+    // Ensure result exists and is an array
+    if (!data || !data.Stations || !Array.isArray(data.Stations.Station)) {
+        console.error("Invalid response structure from /stop/all:", data);
+        return [];
+    }
+
+    return data.Stations.Station;
 }
 
 export async function fetchLines(): Promise<Line[]> {
@@ -175,4 +200,10 @@ export async function getUIServiceData(stop: string, line: string, activeStops: 
     });
 
     return uiData;
+}
+
+export async function fetchVehiclePositions(): Promise<VehiclePositionResponse | null> {
+    console.log("Fetching vehicle positions (GTFS real-time feed)");
+    const data = await metrolinxFetch("/Gtfs/Feed/VehiclePosition");
+    return data;
 }

@@ -9,9 +9,20 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@expo/metro-config": "~0.20.14",
+    "@expo/metro-runtime": "~5.0.4",
+    "expo": "~53.0.10",
+    "expo-splash-screen": "~0.30.9",
+    "expo-status-bar": "~2.2.3",
+    "expo-system-ui": "~5.0.8",
+    "next": "~15.2.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.3",
+    "react-native-svg": "~15.11.2",
+    "react-native-svg-transformer": "~1.5.1",
+    "react-native-web": "~0.20.0",
+    "undici": "^7.16.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
