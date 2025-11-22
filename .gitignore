@@ -63,4 +63,5 @@ cache/
 out
 
 # Environment variables
+.env.local
 .env
