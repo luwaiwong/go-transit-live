@@ -84,7 +84,7 @@ export default function NavigatePage() {
                 `/api/journey?from=${fromStop}&to=${toStop}&fullDay=${fullDay}`
             );
             const data = await response.json();
-            setJourneys(data || []);
+            setJourneys(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching journeys:', error);
             setJourneys([]);

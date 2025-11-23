@@ -155,7 +155,7 @@ export default function Index() {
                 `/api/journey?from=${fromStop}&to=${toStop}&date=${dateStr}`
             );
             const data = await response.json();
-            setJourneys(data || []);
+            setJourneys(Array.isArray(data) ? data : []);
 
             // Navigate to departures view
             updateURL({ view: 'departures', from: fromStop, to: toStop, date: dateStr });
