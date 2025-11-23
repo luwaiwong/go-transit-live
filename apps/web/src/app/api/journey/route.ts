@@ -25,6 +25,18 @@ export async function GET(request: Request) {
         }
     } catch (error) {
         console.error('Error fetching journey:', error);
-        return NextResponse.json({ error: 'Failed to fetch journey' }, { status: 500 });
+        console.error('Error details:', {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            from,
+            to,
+            date,
+            time,
+            fullDay
+        });
+        return NextResponse.json({
+            error: 'Failed to fetch journey',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
     }
 }
