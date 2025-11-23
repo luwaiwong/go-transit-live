@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_background">
+
+    <!-- Station Name Header -->
+    <TextView
+        android:id="@+id/widget_station_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Station Name"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#000000"
+        android:paddingBottom="8dp" />
+
+    <!-- Arrival 1 -->
+    <LinearLayout
+        android:id="@+id/widget_arrival_1_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingVertical="4dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_arrival_1_route"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Route Name"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
+
+            <TextView
+                android:id="@+id/widget_arrival_1_destination"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="→ Destination"
+                android:textSize="12sp"
+                android:textColor="#666666" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_arrival_1_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="5 min"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#007AFF"
+            android:layout_gravity="center_vertical" />
+    </LinearLayout>
+
+    <!-- Arrival 2 -->
+    <LinearLayout
+        android:id="@+id/widget_arrival_2_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingVertical="4dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_arrival_2_route"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
+
+            <TextView
+                android:id="@+id/widget_arrival_2_destination"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="12sp"
+                android:textColor="#666666" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_arrival_2_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#007AFF"
+            android:layout_gravity="center_vertical" />
+    </LinearLayout>
+
+    <!-- Arrival 3 -->
+    <LinearLayout
+        android:id="@+id/widget_arrival_3_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingVertical="4dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_arrival_3_route"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
+
+            <TextView
+                android:id="@+id/widget_arrival_3_destination"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="12sp"
+                android:textColor="#666666" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_arrival_3_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#007AFF"
+            android:layout_gravity="center_vertical" />
+    </LinearLayout>
+
+    <!-- No Arrivals Message -->
+    <TextView
+        android:id="@+id/widget_no_arrivals"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:textStyle="italic"
+        android:paddingVertical="16dp"
+        android:gravity="center" />
+
+    <!-- Last Updated -->
+    <TextView
+        android:id="@+id/widget_last_updated"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Updated: --:--"
+        android:textSize="10sp"
+        android:textColor="#999999"
+        android:layout_marginTop="8dp"
+        android:gravity="end" />
+
+</LinearLayout>

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { StationData, Vehicle, MapMarker } from '../types';
+import { StationData, Vehicle, MapMarker, Arrival } from '../types';
 
 const API_BASE_URL = 'http://localhost:3000/api'; // Change this to your API endpoint
 
@@ -78,4 +78,30 @@ export const getVehicleMarkers = (vehicles: Vehicle[]): MapMarker[] => {
     },
     type: vehicle.type,
   }));
+};
+
+export const fetchStationArrivals = async (stopId: string): Promise<Arrival[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/arrivals/${stopId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching station arrivals:', error);
+    // Return mock data for development
+    return [
+      {
+        routeName: 'Lakeshore West',
+        destination: 'Union Station',
+        arrivalTime: '5 min',
+        platform: '1',
+        status: 'On Time',
+      },
+      {
+        routeName: 'Lakeshore East',
+        destination: 'Oshawa',
+        arrivalTime: '12 min',
+        platform: '2',
+        status: 'On Time',
+      },
+    ];
+  }
 };

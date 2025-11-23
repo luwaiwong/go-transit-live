@@ -38,7 +38,7 @@ npm start
 ## Architecture
 
 ```
-apps/app/
+apps/mobile/
 ├── app/                    # Expo Router pages
 │   ├── _layout.tsx        # Root layout with providers
 │   └── index.tsx          # Home screen with map

@@ -80,3 +80,30 @@ export interface Vehicle {
   stopId: string;
   type: VehicleType;
 }
+
+export interface FavoriteStation {
+  id: string;
+  name: string;
+  code: string;
+  position: Position;
+  isTrain: boolean;
+  isBus: boolean;
+}
+
+export interface FavoriteTrip {
+  id: string;
+  name: string;
+  routeId?: string;
+  fromStationId: string;
+  toStationId: string;
+  vehicleType: VehicleType;
+}
+
+export interface Arrival {
+  routeName: string;
+  destination: string;
+  arrivalTime: string;
+  platform?: string;
+  status?: string;
+  vehicleId?: string;
+}
