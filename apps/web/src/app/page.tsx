@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useTheme } from '../contexts/ThemeContext';
 import DateSelector from '../components/DateSelector';
 import MapLegend from '../components/MapLegend';
+import ThemeCustomizer from '../components/ThemeCustomizer';
 
 // Dynamically import TransitMap with no SSR
 const TransitMap = dynamic(() => import('../components/TransitMap'), {
@@ -63,7 +64,7 @@ interface Journey {
 }
 
 export default function Index() {
-    const { theme } = useTheme();
+    const { theme, setTheme, presets, customThemes, deleteCustomTheme } = useTheme();
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -78,8 +79,14 @@ export default function Index() {
     const [showToDropdown, setShowToDropdown] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [showStationList, setShowStationList] = useState(false);
+    const [sidebarView, setSidebarView] = useState<'tripPlanner' | 'stations' | 'settings'>('tripPlanner');
     const [stationSearchQuery, setStationSearchQuery] = useState('');
+
+    // Settings states
+    const [openaiApiKey, setOpenaiApiKey] = useState('');
+    const [isSaved, setIsSaved] = useState(false);
+    const [useClientSideApi, setUseClientSideApi] = useState(false);
+    const [debugApiLogging, setDebugApiLogging] = useState(false);
 
     // Get current view from URL
     const currentView = searchParams?.get('view') || 'navigation';
@@ -99,6 +106,21 @@ export default function Index() {
         };
 
         fetchStops();
+
+        // Load saved settings from localStorage
+        const savedApiKey = localStorage.getItem('openai_api_key');
+        const savedUseClientSide = localStorage.getItem('use_client_side_api');
+        const savedDebugLogging = localStorage.getItem('debug_api_logging');
+
+        if (savedApiKey) {
+            setOpenaiApiKey(savedApiKey);
+        }
+        if (savedUseClientSide === 'true') {
+            setUseClientSideApi(true);
+        }
+        if (savedDebugLogging === 'true') {
+            setDebugApiLogging(true);
+        }
     }, []);
 
     const handleStopClick = (stop: StopDetails) => {
@@ -223,9 +245,45 @@ export default function Index() {
         }
     };
 
+    // Filter to show only train stations (non-numeric LocationCode)
+    const isTrainStation = (locationCode: string) => {
+        return isNaN(Number(locationCode));
+    };
+
     const filteredStations = stops?.filter((stop) =>
+        isTrainStation(stop.LocationCode) &&
         stop.LocationName?.toLowerCase().includes((stationSearchQuery || '').toLowerCase())
     ) || [];
+
+    // Settings handlers
+    const handleSaveSettings = () => {
+        if (openaiApiKey) {
+            localStorage.setItem('openai_api_key', openaiApiKey);
+        } else {
+            localStorage.removeItem('openai_api_key');
+        }
+        localStorage.setItem('use_client_side_api', useClientSideApi.toString());
+        localStorage.setItem('debug_api_logging', debugApiLogging.toString());
+
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
+    };
+
+    const handleClearSettings = () => {
+        setOpenaiApiKey('');
+        setUseClientSideApi(false);
+        setDebugApiLogging(false);
+        localStorage.removeItem('openai_api_key');
+        localStorage.removeItem('use_client_side_api');
+        localStorage.removeItem('debug_api_logging');
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
+    };
+
+    const maskApiKey = (key: string) => {
+        if (!key || key.length < 8) return key;
+        return key.slice(0, 7) + '•'.repeat(key.length - 11) + key.slice(-4);
+    };
 
     return (
         <div className="h-screen flex" style={{ backgroundColor: theme.colors.background }}>
@@ -261,33 +319,45 @@ export default function Index() {
                         <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => setShowStationList(false)}
+                                    onClick={() => setSidebarView('tripPlanner')}
                                     className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
-                                        !showStationList ? 'text-white' : ''
+                                        sidebarView === 'tripPlanner' ? 'text-white' : ''
                                     }`}
                                     style={{
-                                        backgroundColor: !showStationList ? theme.colors.primary : theme.colors.textSecondary + '30',
-                                        color: !showStationList ? '#ffffff' : theme.colors.text
+                                        backgroundColor: sidebarView === 'tripPlanner' ? theme.colors.primary : theme.colors.textSecondary + '30',
+                                        color: sidebarView === 'tripPlanner' ? '#ffffff' : theme.colors.text
                                     }}
                                 >
                                     Trip Planner
                                 </button>
                                 <button
-                                    onClick={() => setShowStationList(true)}
+                                    onClick={() => setSidebarView('stations')}
                                     className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
-                                        showStationList ? 'text-white' : ''
+                                        sidebarView === 'stations' ? 'text-white' : ''
                                     }`}
                                     style={{
-                                        backgroundColor: showStationList ? theme.colors.primary : theme.colors.textSecondary + '30',
-                                        color: showStationList ? '#ffffff' : theme.colors.text
+                                        backgroundColor: sidebarView === 'stations' ? theme.colors.primary : theme.colors.textSecondary + '30',
+                                        color: sidebarView === 'stations' ? '#ffffff' : theme.colors.text
                                     }}
                                 >
                                     Stations
                                 </button>
+                                <button
+                                    onClick={() => setSidebarView('settings')}
+                                    className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
+                                        sidebarView === 'settings' ? 'text-white' : ''
+                                    }`}
+                                    style={{
+                                        backgroundColor: sidebarView === 'settings' ? theme.colors.primary : theme.colors.textSecondary + '30',
+                                        color: sidebarView === 'settings' ? '#ffffff' : theme.colors.text
+                                    }}
+                                >
+                                    Settings
+                                </button>
                             </div>
                         </div>
 
-                        {!showStationList ? (
+                        {sidebarView === 'tripPlanner' ? (
                             <>
                                 {currentView === 'departures' ? (
                                     /* Departures View */
@@ -586,15 +656,18 @@ export default function Index() {
                     </>
                                 )}
                             </>
-                        ) : (
+                        ) : sidebarView === 'stations' ? (
                             /* Station List View */
                             <div className="flex flex-col h-full">
                                 <div className="p-4 border-b" style={{ borderColor: theme.colors.textSecondary + '40' }}>
+                                    <h3 className="text-sm font-bold mb-2" style={{ color: theme.colors.text }}>
+                                        Train Stations
+                                    </h3>
                                     <input
                                         type="text"
                                         value={stationSearchQuery}
                                         onChange={(e) => setStationSearchQuery(e.target.value)}
-                                        placeholder="Search stations..."
+                                        placeholder="Search train stations..."
                                         className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2"
                                         style={{
                                             borderColor: theme.colors.textSecondary,
@@ -611,7 +684,7 @@ export default function Index() {
                                                 onClick={() => {
                                                     setSearchFrom(station.LocationName);
                                                     setFromStop(station.LocationCode);
-                                                    setShowStationList(false);
+                                                    setSidebarView('tripPlanner');
                                                 }}
                                                 className="w-full text-left px-4 py-3 border-b transition-colors"
                                                 style={{
@@ -621,15 +694,258 @@ export default function Index() {
                                                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primaryLight + '20'}
                                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                             >
-                                                <div className="font-medium">{station.LocationName}</div>
-                                                <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                                                    {station.LocationCode}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-lg">🚆</span>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{station.LocationName}</div>
+                                                        <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                                                            Station Code: {station.LocationCode}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </button>
                                         ))
                                     ) : (
                                         <div className="p-4 text-center text-sm" style={{ color: theme.colors.textSecondary }}>
-                                            No stations found
+                                            No train stations found
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            /* Settings View */
+                            <div className="flex flex-col h-full overflow-y-auto">
+                                <div className="p-4 space-y-6">
+                                    {/* Theme Section */}
+                                    <div>
+                                        <h3 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: theme.colors.text }}>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                            </svg>
+                                            Theme
+                                        </h3>
+                                        <p className="text-xs mb-3" style={{ color: theme.colors.textSecondary }}>
+                                            Customize your app appearance
+                                        </p>
+                                        <div className="space-y-2">
+                                            {presets.map((preset) => (
+                                                <button
+                                                    key={preset.id}
+                                                    onClick={() => setTheme(preset)}
+                                                    className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                                                        theme.id === preset.id ? 'ring-2 ring-offset-1' : ''
+                                                    }`}
+                                                    style={{
+                                                        backgroundColor: preset.colors.surface,
+                                                        borderColor: theme.id === preset.id ? preset.colors.primary : preset.colors.textSecondary,
+                                                        color: preset.colors.text,
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex gap-1">
+                                                            <div
+                                                                className="w-4 h-4 rounded"
+                                                                style={{ backgroundColor: preset.colors.primary }}
+                                                            />
+                                                            <div
+                                                                className="w-4 h-4 rounded"
+                                                                style={{ backgroundColor: preset.colors.secondary }}
+                                                            />
+                                                            <div
+                                                                className="w-4 h-4 rounded"
+                                                                style={{ backgroundColor: preset.colors.accent }}
+                                                            />
+                                                        </div>
+                                                        <span className="font-medium text-xs">{preset.name}</span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Custom Theme Creator */}
+                                        <div className="mt-4">
+                                            <ThemeCustomizer />
+                                        </div>
+
+                                        {/* Custom Themes List */}
+                                        {customThemes.length > 0 && (
+                                            <div className="mt-4">
+                                                <h4 className="text-xs font-semibold mb-2" style={{ color: theme.colors.text }}>
+                                                    Custom Themes ({customThemes.length})
+                                                </h4>
+                                                <div className="space-y-2">
+                                                    {customThemes.map((customTheme) => (
+                                                        <div
+                                                            key={customTheme.id}
+                                                            className="p-3 rounded-lg border-2 transition-all"
+                                                            style={{
+                                                                backgroundColor: customTheme.colors.surface,
+                                                                borderColor: theme.id === customTheme.id ? customTheme.colors.primary : customTheme.colors.textSecondary,
+                                                                color: customTheme.colors.text,
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="flex gap-1">
+                                                                        <div
+                                                                            className="w-4 h-4 rounded"
+                                                                            style={{ backgroundColor: customTheme.colors.primary }}
+                                                                        />
+                                                                        <div
+                                                                            className="w-4 h-4 rounded"
+                                                                            style={{ backgroundColor: customTheme.colors.secondary }}
+                                                                        />
+                                                                        <div
+                                                                            className="w-4 h-4 rounded"
+                                                                            style={{ backgroundColor: customTheme.colors.accent }}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => deleteCustomTheme(customTheme.id)}
+                                                                    className="p-1 rounded transition-colors hover:bg-red-100"
+                                                                    title="Delete theme"
+                                                                >
+                                                                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => setTheme(customTheme)}
+                                                                className="w-full text-left"
+                                                            >
+                                                                <span className="font-medium text-xs">{customTheme.name}</span>
+                                                                {theme.id === customTheme.id && (
+                                                                    <span className="ml-2 text-xs px-2 py-0.5 rounded" style={{ backgroundColor: customTheme.colors.primary + '30', color: customTheme.colors.primary }}>
+                                                                        Active
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="border-t" style={{ borderColor: theme.colors.textSecondary + '40' }}></div>
+
+                                    {/* OpenAI API Key Section */}
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <h3 className="text-sm font-bold" style={{ color: theme.colors.text }}>OpenAI API Key</h3>
+                                            <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: theme.colors.primaryLight + '30', color: theme.colors.primary }}>
+                                                Optional
+                                            </span>
+                                        </div>
+                                        <p className="text-xs mb-3" style={{ color: theme.colors.textSecondary }}>
+                                            Provide your own API key for client-side calls
+                                        </p>
+
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-xs font-medium mb-1" style={{ color: theme.colors.text }}>
+                                                    API Key
+                                                </label>
+                                                <input
+                                                    type="password"
+                                                    value={openaiApiKey}
+                                                    onChange={(e) => setOpenaiApiKey(e.target.value)}
+                                                    placeholder="sk-..."
+                                                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2"
+                                                    style={{
+                                                        borderColor: theme.colors.textSecondary,
+                                                        backgroundColor: theme.colors.surface,
+                                                        color: theme.colors.text
+                                                    }}
+                                                />
+                                                {openaiApiKey && (
+                                                    <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>
+                                                        Preview: {maskApiKey(openaiApiKey)}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    id="useClientSideApi"
+                                                    checked={useClientSideApi}
+                                                    onChange={(e) => setUseClientSideApi(e.target.checked)}
+                                                    className="h-4 w-4 rounded"
+                                                />
+                                                <label
+                                                    htmlFor="useClientSideApi"
+                                                    className="ml-2 block text-xs"
+                                                    style={{ color: theme.colors.text }}
+                                                >
+                                                    Enable client-side API calls
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t" style={{ borderColor: theme.colors.textSecondary + '40' }}></div>
+
+                                    {/* Developer Options */}
+                                    <div>
+                                        <h3 className="text-sm font-bold mb-2" style={{ color: theme.colors.text }}>
+                                            Developer Options
+                                        </h3>
+                                        <p className="text-xs mb-3" style={{ color: theme.colors.textSecondary }}>
+                                            Advanced debugging settings
+                                        </p>
+
+                                        <div className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                id="debugApiLogging"
+                                                checked={debugApiLogging}
+                                                onChange={(e) => setDebugApiLogging(e.target.checked)}
+                                                className="h-4 w-4 rounded"
+                                            />
+                                            <label
+                                                htmlFor="debugApiLogging"
+                                                className="ml-2 block text-xs"
+                                                style={{ color: theme.colors.text }}
+                                            >
+                                                Enable API response logging
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2 pt-4">
+                                        <button
+                                            onClick={handleSaveSettings}
+                                            className="flex-1 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                                            style={{
+                                                backgroundColor: theme.colors.primary,
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primaryDark}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary}
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            onClick={handleClearSettings}
+                                            className="px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                                            style={{
+                                                backgroundColor: theme.colors.textSecondary + '30',
+                                                color: theme.colors.text
+                                            }}
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+
+                                    {/* Success Message */}
+                                    {isSaved && (
+                                        <div className="p-3 rounded-lg" style={{ backgroundColor: theme.colors.secondary + '20' }}>
+                                            <p className="text-xs font-medium" style={{ color: theme.colors.secondary }}>
+                                                Settings saved successfully!
+                                            </p>
                                         </div>
                                     )}
                                 </div>
@@ -638,33 +954,6 @@ export default function Index() {
                     </div>
                 )}
 
-                {/* Settings Button */}
-                <div className={`p-4 border-t ${sidebarCollapsed ? 'flex justify-center' : ''}`} style={{ borderColor: theme.colors.textSecondary + '40' }}>
-                    <Link
-                        href="/settings"
-                        className={`flex items-center gap-2 transition-colors ${
-                            sidebarCollapsed ? '' : 'w-full'
-                        }`}
-                        style={{ color: theme.colors.text }}
-                        title="Settings"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                            />
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                        </svg>
-                        {!sidebarCollapsed && <span className="font-medium">Settings</span>}
-                    </Link>
-                </div>
             </div>
 
             {/* Main Content - Map with Legend */}
