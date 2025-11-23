@@ -131,16 +131,31 @@ interface ThemeContextType {
     theme: Theme;
     setTheme: (theme: Theme) => void;
     presets: Theme[];
+    customThemes: Theme[];
     createCustomTheme: (name: string, colors: ThemeColors) => Theme;
+    saveCustomTheme: (theme: Theme) => void;
+    deleteCustomTheme: (themeId: string) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
     const [theme, setThemeState] = useState<Theme>(presetThemes[0]);
+    const [customThemes, setCustomThemes] = useState<Theme[]>([]);
 
     useEffect(() => {
-        // Load theme from localStorage
+        // Load custom themes from localStorage
+        const savedCustomThemes = localStorage.getItem('custom_themes');
+        if (savedCustomThemes) {
+            try {
+                const parsedCustomThemes = JSON.parse(savedCustomThemes);
+                setCustomThemes(parsedCustomThemes);
+            } catch (error) {
+                console.error('Error loading custom themes:', error);
+            }
+        }
+
+        // Load current theme from localStorage
         const savedTheme = localStorage.getItem('app_theme');
         if (savedTheme) {
             try {
@@ -179,13 +194,55 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         };
     };
 
+    const saveCustomTheme = (newTheme: Theme) => {
+        // Check if theme with this ID already exists
+        const existingIndex = customThemes.findIndex(t => t.id === newTheme.id);
+
+        let updatedCustomThemes: Theme[];
+        if (existingIndex >= 0) {
+            // Update existing theme
+            updatedCustomThemes = [...customThemes];
+            updatedCustomThemes[existingIndex] = newTheme;
+        } else {
+            // Add new theme
+            updatedCustomThemes = [...customThemes, newTheme];
+        }
+
+        setCustomThemes(updatedCustomThemes);
+        localStorage.setItem('custom_themes', JSON.stringify(updatedCustomThemes));
+
+        // Also set it as the current theme
+        setTheme(newTheme);
+    };
+
+    const deleteCustomTheme = (themeId: string) => {
+        const updatedCustomThemes = customThemes.filter(t => t.id !== themeId);
+        setCustomThemes(updatedCustomThemes);
+        localStorage.setItem('custom_themes', JSON.stringify(updatedCustomThemes));
+
+        // If the deleted theme was the current theme, switch to default
+        if (theme.id === themeId) {
+            setTheme(presetThemes[0]);
+        }
+    };
+
     // Apply theme on mount
     useEffect(() => {
         setTheme(theme);
     }, []);
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, presets: presetThemes, createCustomTheme }}>
+        <ThemeContext.Provider
+            value={{
+                theme,
+                setTheme,
+                presets: presetThemes,
+                customThemes,
+                createCustomTheme,
+                saveCustomTheme,
+                deleteCustomTheme
+            }}
+        >
             {children}
         </ThemeContext.Provider>
     );

@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
+import ThemeCustomizer from '../../components/ThemeCustomizer';
 
 export default function SettingsPage() {
-    const { theme, setTheme, presets } = useTheme();
+    const { theme, setTheme, presets, customThemes, deleteCustomTheme } = useTheme();
     const [openaiApiKey, setOpenaiApiKey] = useState('');
     const [isSaved, setIsSaved] = useState(false);
     const [useClientSideApi, setUseClientSideApi] = useState(false);
@@ -158,6 +159,72 @@ export default function SettingsPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Custom Theme Creator */}
+                                <div className="mt-4">
+                                    <ThemeCustomizer />
+                                </div>
+
+                                {/* Custom Themes List */}
+                                {customThemes.length > 0 && (
+                                    <div className="mt-4">
+                                        <h4 className="text-sm font-medium mb-3" style={{ color: theme.colors.text }}>
+                                            Your Custom Themes ({customThemes.length})
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {customThemes.map((customTheme) => (
+                                                <div
+                                                    key={customTheme.id}
+                                                    className="p-4 rounded-lg border-2 transition-all"
+                                                    style={{
+                                                        backgroundColor: customTheme.colors.surface,
+                                                        borderColor: theme.id === customTheme.id ? customTheme.colors.primary : customTheme.colors.textSecondary,
+                                                        color: customTheme.colors.text,
+                                                    }}
+                                                >
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex gap-1">
+                                                                <div
+                                                                    className="w-6 h-6 rounded"
+                                                                    style={{ backgroundColor: customTheme.colors.primary }}
+                                                                />
+                                                                <div
+                                                                    className="w-6 h-6 rounded"
+                                                                    style={{ backgroundColor: customTheme.colors.secondary }}
+                                                                />
+                                                                <div
+                                                                    className="w-6 h-6 rounded"
+                                                                    style={{ backgroundColor: customTheme.colors.accent }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => deleteCustomTheme(customTheme.id)}
+                                                            className="p-1 rounded transition-colors hover:bg-red-100"
+                                                            title="Delete theme"
+                                                        >
+                                                            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setTheme(customTheme)}
+                                                        className="w-full text-left"
+                                                    >
+                                                        <span className="font-medium text-sm">{customTheme.name}</span>
+                                                        {theme.id === customTheme.id && (
+                                                            <span className="ml-2 text-xs px-2 py-0.5 rounded" style={{ backgroundColor: customTheme.colors.primary + '30', color: customTheme.colors.primary }}>
+                                                                Active
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
