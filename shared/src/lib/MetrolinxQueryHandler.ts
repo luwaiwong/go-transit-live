@@ -1,6 +1,7 @@
 
 import { QueryClient, useQuery } from "@tanstack/react-query";
 import * as MetrolinxAPI from "./MetrolinxAPIHandler";
+import { fetchStopsCached, fetchLinesCached } from "./MetrolinxCachedFetch";
 import { Stop, Line, NextServiceResponse, Journey, UIServiceInfo } from "./MetrolinxTypes";
 
 export const MetrolinxQueryHandler = new QueryClient({
@@ -15,14 +16,14 @@ export const MetrolinxQueryHandler = new QueryClient({
 export function useStopsQuery(): ReturnType<typeof useQuery<Stop[], Error>> {
   return useQuery({
     queryKey: ['stops'],
-    queryFn: MetrolinxAPI.fetchStops,
+    queryFn: fetchStopsCached,
   });
 }
 
 export function useLinesQuery(): ReturnType<typeof useQuery<Line[], Error>> {
   return useQuery({
     queryKey: ['lines'],
-    queryFn: MetrolinxAPI.fetchLines,
+    queryFn: fetchLinesCached,
   });
 }
 

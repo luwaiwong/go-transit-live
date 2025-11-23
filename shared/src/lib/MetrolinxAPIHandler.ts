@@ -1,10 +1,9 @@
-
-import { Stop, Line, StopDetails, NextService, NextServiceResponse, Journey, Service, UIServiceInfo } from './MetrolinxTypes';
+import { Stop, Line, StopDetails, NextService, NextServiceResponse, Journey, Service, UIServiceInfo, VehiclePositionResponse } from './MetrolinxTypes';
 
 const METROLINX_API_URL = "https://api.openmetrolinx.com/OpenDataAPI/api/V1";
 const METROLINX_API_KEY = process.env.NX_EXPO_METROLINX_API_KEY;
 
-const DEBUG = true;
+const DEBUG = process.env.NX_DEBUG_API_LOGGING === 'true' || false;
 
 function formatDateYYYYMMDD(date: Date): string {
     return date.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '');
@@ -26,6 +25,7 @@ async function metrolinxFetch(endpoint: string): Promise<any> {
     }
     const url = `${METROLINX_API_URL}${endpoint}?key=${METROLINX_API_KEY}`;
     if (DEBUG) console.log("Fetching:", url);
+
     const response = await fetch(url);
     if (!response.ok) {
         const errorText = await response.text();
@@ -45,7 +45,14 @@ async function metrolinxFetch(endpoint: string): Promise<any> {
 export async function fetchStops(): Promise<Stop[]> {
     console.log("Fetching all active stops");
     const data = await metrolinxFetch("/stop/all");
-    return data.result;
+
+    // Ensure result exists and is an array
+    if (!data || !data.Stations || !Array.isArray(data.Stations.Station)) {
+        console.error("Invalid response structure from /stop/all:", data);
+        return [];
+    }
+
+    return data.Stations.Station;
 }
 
 export async function fetchLines(): Promise<Line[]> {
@@ -57,9 +64,61 @@ export async function fetchLines(): Promise<Line[]> {
 
 export async function fetchStopDetails(stopId: string): Promise<StopDetails | null> {
     if (!stopId) return null;
-    console.log(`Fetching details for stop: ${stopId}`);
-    const data = await metrolinxFetch(`/stop/details/${stopId}`);
-    return data.result;
+    console.log(`[fetchStopDetails] Fetching details for stop: ${stopId}`);
+
+    try {
+        const data = await metrolinxFetch(`/stop/details/${stopId}`);
+
+        console.log('[fetchStopDetails] API Response:', {
+            hasData: !!data,
+            keys: data ? Object.keys(data) : [],
+            hasResult: data && 'result' in data,
+            resultType: typeof data?.result,
+            resultValue: data?.result
+        });
+
+        // Check if result exists and is not undefined
+        if (data && data.result !== undefined && data.result !== null) {
+            return data.result;
+        }
+
+        console.log('[fetchStopDetails] No result in API response, trying alternate property');
+
+        // Try alternate response structures
+        if (data && typeof data === 'object') {
+            // Check if the data itself is the stop details
+            if ('LocationCode' in data) {
+                return data as StopDetails;
+            }
+            // Check for common alternate property names
+            for (const prop of ['Stop', 'StopDetail', 'Station', 'data']) {
+                if (data[prop]) {
+                    console.log(`[fetchStopDetails] Found data in ${prop} property`);
+                    return data[prop];
+                }
+            }
+        }
+
+        console.warn(`[fetchStopDetails] No valid stop details found in response for ${stopId}`);
+        return null;
+    } catch (error) {
+        console.error(`[fetchStopDetails] Error fetching stop details for ${stopId}:`, error);
+        // If /stop/details fails, fall back to basic stop info from /stop/all
+        console.log(`[fetchStopDetails] Falling back to basic stop info from /stop/all`);
+        try {
+            const allStopsData = await metrolinxFetch('/stop/all');
+            if (allStopsData?.Stations?.Station) {
+                const stop = allStopsData.Stations.Station.find((s: Stop) => s.LocationCode === stopId);
+                if (stop) {
+                    console.log(`[fetchStopDetails] Found basic stop info for ${stopId}`);
+                    return stop as StopDetails;
+                }
+            }
+        } catch (fallbackError) {
+            console.error(`[fetchStopDetails] Fallback also failed:`, fallbackError);
+        }
+        return null;
+    }
 }
 
 export async function fetchServiceForStop(stop: string): Promise<NextServiceResponse | null> {
@@ -73,10 +132,54 @@ export async function fetchDirectTripNow(time: Date, start: string, end: string,
     const hour = formatTimeHHMM(time);
 
     const endpoint = `/schedule/journey?from=${start}&to=${end}&date=${formattedDate}&time=${hour}&limit=${max}`;
-    const data = await metrolinxFetch(endpoint);
 
-    if (data && data.Journeys && data.Journeys.Journey) {
-        const trips = data.Journeys.Journey.filter((service: Service) => service.Trips.trip.length === 1);
+    try {
+        const data = await metrolinxFetch(endpoint);
+
+        if (DEBUG) console.log('[fetchDirectTripNow] API response:', JSON.stringify(data, null, 2));
+
+        // Check if response has the expected structure
+        if (!data) {
+            console.log('[fetchDirectTripNow] No data received from API');
+            return [];
+        }
+
+        if (!data.Journeys) {
+            console.log('[fetchDirectTripNow] No Journeys property in response');
+            return [];
+        }
+
+        if (!data.Journeys.Journey) {
+            console.log('[fetchDirectTripNow] No Journey property in Journeys');
+            return [];
+        }
+
+        // Handle both array and single object responses
+        const journeyData = Array.isArray(data.Journeys.Journey)
+            ? data.Journeys.Journey
+            : [data.Journeys.Journey];
+
+        if (journeyData.length === 0) {
+            console.log('[fetchDirectTripNow] Journey array is empty');
+            return [];
+        }
+
+        // Filter for direct trips (single trip only) with error handling
+        const trips = journeyData.filter((service: Service) => {
+            try {
+                return service.Trips && service.Trips.trip && Array.isArray(service.Trips.trip) && service.Trips.trip.length === 1;
+            } catch (err) {
+                console.error('[fetchDirectTripNow] Error filtering service:', err, service);
+                return false;
+            }
+        });
+
+        if (trips.length === 0) {
+            console.log('[fetchDirectTripNow] No direct trips found (all trips have transfers)');
+            return [];
+        }
+
+        // Map to Journey objects with error handling
         const journeys: Journey[] = trips.map((service: Service) => ({
             From: start,
             To: end,
@@ -84,50 +187,110 @@ export async function fetchDirectTripNow(time: Date, start: string, end: string,
             Date: formattedDate,
             Services: [service]
         }));
+
+        // Sort by start time with error handling
         return journeys.sort((a, b) => {
-            const timeA = parseDateTimeString(a.Services[0].StartTime).getTime();
-            const timeB = parseDateTimeString(b.Services[0].StartTime).getTime();
-            return timeA - timeB;
+            try {
+                const timeA = parseDateTimeString(a.Services[0].StartTime).getTime();
+                const timeB = parseDateTimeString(b.Services[0].StartTime).getTime();
+                return timeA - timeB;
+            } catch (err) {
+                console.error('[fetchDirectTripNow] Error sorting journeys:', err);
+                return 0;
+            }
         });
+    } catch (error) {
+        console.error('[fetchDirectTripNow] Error processing journey data:', error);
+        throw error; // Re-throw to be caught by the API route handler
     }
-    return [];
 }
 
 export async function fetchDirectTripsForDay(date: Date, start: string, end: string, dayFactor: number = 2, max: number = 5): Promise<Journey[] | null> {
     const formattedDate = formatDateYYYYMMDD(date);
     const allTrips: Service[] = [];
 
-    const promises = [];
-    for (let i = 1; i <= 24 / dayFactor; i++) {
-        const hour = `${String(i * dayFactor).padStart(2, '0')}00`;
-        const endpoint = `/schedule/journey?from=${start}&to=${end}&date=${formattedDate}&time=${hour}&limit=${max}`;
-        promises.push(metrolinxFetch(endpoint));
-    }
-
-    const results = await Promise.all(promises);
-
-    results.forEach(data => {
-        if (data && data.Journeys && data.Journeys.Journey) {
-            data.Journeys.Journey.forEach((service: Service) => {
-                if (service.Trips.trip.length === 1 && !allTrips.some(t => t.StartTime === service.StartTime)) {
-                    allTrips.push(service);
-                }
-            });
+    try {
+        const promises = [];
+        for (let i = 1; i <= 24 / dayFactor; i++) {
+            const hour = `${String(i * dayFactor).padStart(2, '0')}00`;
+            const endpoint = `/schedule/journey?from=${start}&to=${end}&date=${formattedDate}&time=${hour}&limit=${max}`;
+            promises.push(metrolinxFetch(endpoint));
         }
-    });
 
-    const journeys: Journey[] = allTrips.map((service: Service) => ({
-        From: start,
-        To: end,
-        Time: service.StartTime.split(' ')[1] || '',
-        Date: formattedDate,
-        Services: [service]
-    }));
-    return journeys.sort((a, b) => {
-        const timeA = parseDateTimeString(a.Services[0].StartTime).getTime();
-        const timeB = parseDateTimeString(b.Services[0].StartTime).getTime();
-        return timeA - timeB;
-    });
+        const results = await Promise.all(promises);
+
+        results.forEach((data, index) => {
+            try {
+                if (!data) {
+                    console.log(`[fetchDirectTripsForDay] No data for request ${index}`);
+                    return;
+                }
+
+                if (!data.Journeys) {
+                    console.log(`[fetchDirectTripsForDay] No Journeys property for request ${index}`);
+                    return;
+                }
+
+                if (!data.Journeys.Journey) {
+                    console.log(`[fetchDirectTripsForDay] No Journey property for request ${index}`);
+                    return;
+                }
+
+                // Handle both array and single object responses
+                const journeyData = Array.isArray(data.Journeys.Journey)
+                    ? data.Journeys.Journey
+                    : [data.Journeys.Journey];
+
+                journeyData.forEach((service: Service) => {
+                    try {
+                        // Check if service has valid structure
+                        if (!service.Trips || !service.Trips.trip || !Array.isArray(service.Trips.trip)) {
+                            console.log('[fetchDirectTripsForDay] Invalid service structure, skipping');
+                            return;
+                        }
+
+                        // Only include direct trips (single trip, no transfers)
+                        if (service.Trips.trip.length === 1 && !allTrips.some(t => t.StartTime === service.StartTime)) {
+                            allTrips.push(service);
+                        }
+                    } catch (err) {
+                        console.error('[fetchDirectTripsForDay] Error processing service:', err, service);
+                    }
+                });
+            } catch (err) {
+                console.error(`[fetchDirectTripsForDay] Error processing result ${index}:`, err);
+            }
+        });
+
+        if (allTrips.length === 0) {
+            console.log('[fetchDirectTripsForDay] No direct trips found for the entire day');
+            return [];
+        }
+
+        // Map to Journey objects with error handling
+        const journeys: Journey[] = allTrips.map((service: Service) => ({
+            From: start,
+            To: end,
+            Time: service.StartTime.split(' ')[1] || '',
+            Date: formattedDate,
+            Services: [service]
+        }));
+
+        // Sort by start time with error handling
+        return journeys.sort((a, b) => {
+            try {
+                const timeA = parseDateTimeString(a.Services[0].StartTime).getTime();
+                const timeB = parseDateTimeString(b.Services[0].StartTime).getTime();
+                return timeA - timeB;
+            } catch (err) {
+                console.error('[fetchDirectTripsForDay] Error sorting journeys:', err);
+                return 0;
+            }
+        });
+    } catch (error) {
+        console.error('[fetchDirectTripsForDay] Error processing full day journey data:', error);
+        throw error; // Re-throw to be caught by the API route handler
+    }
 }
 
 export async function getUIServiceData(stop: string, line: string, activeStops: Stop[], lines: Line[]): Promise<UIServiceInfo[]> {
@@ -175,4 +338,10 @@ export async function getUIServiceData(stop: string, line: string, activeStops: 
     });
 
     return uiData;
+}
+
+export async function fetchVehiclePositions(): Promise<VehiclePositionResponse | null> {
+    console.log("Fetching vehicle positions (GTFS real-time feed)");
+    const data = await metrolinxFetch("/Gtfs/Feed/VehiclePosition");
+    return data;
 }
