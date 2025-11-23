@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 import { fetchDirectTripNow, fetchDirectTripsForDay } from '@go-transit-ontario/shared';
 
 export async function GET(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const from = searchParams.get('from');
-        const to = searchParams.get('to');
-        const date = searchParams.get('date');
-        const time = searchParams.get('time');
-        const fullDay = searchParams.get('fullDay') === 'true';
+    const { searchParams } = new URL(request.url);
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const date = searchParams.get('date');
+    const time = searchParams.get('time');
+    const fullDay = searchParams.get('fullDay') === 'true';
 
+    try {
         if (!from || !to) {
             return NextResponse.json({ error: 'Missing required parameters: from and to' }, { status: 400 });
         }
