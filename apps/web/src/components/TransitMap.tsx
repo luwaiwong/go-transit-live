@@ -184,7 +184,27 @@ export default function TransitMap({ highlightedStops = [], onStopClick }: Trans
                         // Show all stops (both train and bus)
                     );
 
-                console.log(`Loaded ${validStops.length} stations on map`);
+                // Log station type breakdown for debugging
+                const trainStations = validStops.filter(s => s.IsTrain && !s.IsBus);
+                const busStops = validStops.filter(s => s.IsBus && !s.IsTrain);
+                const mixedStops = validStops.filter(s => s.IsBus && s.IsTrain);
+                const unknownStops = validStops.filter(s => !s.IsBus && !s.IsTrain);
+
+                console.log(`Loaded ${validStops.length} stations on map:`,
+                    `${trainStations.length} train stations,`,
+                    `${busStops.length} bus stops,`,
+                    `${mixedStops.length} mixed,`,
+                    `${unknownStops.length} unknown`);
+
+                if (trainStations.length > 0) {
+                    console.log('Sample train stations:', trainStations.slice(0, 3).map(s => ({
+                        name: s.LocationName,
+                        code: s.LocationCode,
+                        type: s.LocationType,
+                        isTrain: s.IsTrain,
+                        isBus: s.IsBus
+                    })));
+                }
 
                 setStops(validStops);
                 setLoading(false);

@@ -173,11 +173,11 @@ export default function Index() {
     };
 
     const filteredFromStops = stops.filter((stop) =>
-        stop.LocationName.toLowerCase().includes(searchFrom.toLowerCase())
+        stop.LocationName.toLowerCase().includes((searchFrom || '').toLowerCase())
     );
 
     const filteredToStops = stops.filter((stop) =>
-        stop.LocationName.toLowerCase().includes(searchTo.toLowerCase())
+        stop.LocationName.toLowerCase().includes((searchTo || '').toLowerCase())
     );
 
     const formatTime = (timeStr: string) => {
@@ -224,7 +224,7 @@ export default function Index() {
     };
 
     const filteredStations = stops?.filter((stop) =>
-        stop.LocationName?.toLowerCase().includes(stationSearchQuery.toLowerCase())
+        stop.LocationName?.toLowerCase().includes((stationSearchQuery || '').toLowerCase())
     ) || [];
 
     return (
